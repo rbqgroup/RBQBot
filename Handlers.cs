@@ -416,8 +416,7 @@ namespace RBQBot
                                 text: $"欢迎管理员批准的 <a href=\"tg://user?id={wait3.UserId}\">新绒布球</a> 加入!",
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
-                        }
-                        else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误!可能用户已验证!", false, null, 30);
+                        } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误!可能用户已验证!", false, null, 30);
                     } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
                     break;
                 case "adminkick":
