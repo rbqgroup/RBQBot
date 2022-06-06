@@ -30,32 +30,40 @@ namespace RBQBot
                 "唔",
                 "嗯", "嗯", "嗯", "嗯",
                 "嗯嗯", "嗯嗯",
-                "呃", "呃呃",
-                "哦", "哦哦", "哦哦哦",
-                "嗷", "嗷嗷",
+                "呃",
+                "呃呃",
+                "哦",
+                "哦哦",
+                "嗷",
+                "嗷嗷",
                 "呕",
                 "噢",
-                "喔", "喔喔", "喔喔喔",
+                "喔",
+                "喔喔",
 
                 "唔嗯", "唔嗯",
                 "唔啊",
             };
             string[] chartb = {
-                ".",
-                "..",
+                ".", ".", ".",
+                "..", "..",
                 "…", //"…", "…", "…", "…", "…",
                 //"……", "……", "……", "……",
                 //"………", "………",
-                "！", "！！",
-                "？", "？？",
-                "！？", "？！",
-                "，", "，，"
+                "！", "！", "！",
+                "！！", "！！",
+                "？", "？", "？",
+                "？？", "？？",
+                "！？",
+                "？！",
+                "，", "，", "，",
+                "，，", "，，",
             };
 
             var R = new Random();
             var sb = new StringBuilder();
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < R.Next(3, 7); i++)
             {
                 sb.Append(charta[R.Next(0, charta.Length)]);
                 if (i % 2 == 1)
@@ -147,8 +155,8 @@ namespace RBQBot
         private static async Task BotOnMessageReceived(ITelegramBotClient botClient, Message message)
         {
 #if DEBUG
-            Console.WriteLine($"RecvMSG! MsgType: {message.Type} | MsgId: {message.MessageId}\r\n" +
-                    $"ChatType: {message.Chat.Type} | ChatId: {message.Chat.Id} | ChatTitle: {message.Chat.Title}");
+            //Console.WriteLine($"RecvMSG! MsgType: {message.Type} | MsgId: {message.MessageId}\r\n" +
+            //        $"ChatType: {message.Chat.Type} | ChatId: {message.Chat.Id} | ChatTitle: {message.Chat.Title}");
 #endif
 
             if (message.From.IsBot == false)
@@ -1218,7 +1226,7 @@ namespace RBQBot
                             botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                             botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"{comm[1]} 不存在!",
+                                    text: $"口塞 {comm[1]} 不存在!",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
                         }
@@ -1402,35 +1410,47 @@ namespace RBQBot
                         var R = new Random();
                         var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
                         var gag = Program.DB.GetGagItemInfo(rbq.GagId);
-                        var tm = DateTime.UtcNow.AddHours(8);
-
-                        rbq.StartLockTime = tm.Ticks;
-                        rbq.LockCount = gag.UnLockCount;
-                        rbq.GagId = gag.Id;
-                        Program.DB.SetRBQStatus(rbq);
-
-                        if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false) // 检查内存队列中没有RBQ 并添加进内存队列
+                        if (gag != null)
                         {
-                            var timeout = (tm.AddMinutes(Program.LockTime) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
-                            var rbqx = new RBQList(rbq.Id, rbq.LockCount, rbq.GagId, timeout, Program.List);
-                            Program.List.TryAdd(rbq.Id, rbqx);
+                            var tm = DateTime.UtcNow.AddHours(8);
+
+                            rbq.StartLockTime = tm.Ticks;
+                            rbq.LockCount = gag.UnLockCount;
+                            rbq.GagId = gag.Id;
+                            Program.DB.SetRBQStatus(rbq);
+
+                            if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false) // 检查内存队列中没有RBQ 并添加进内存队列
+                            {
+                                var timeout = (tm.AddMinutes(Program.LockTime) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+                                var rbqx = new RBQList(rbq.Id, rbq.LockCount, rbq.GagId, timeout, Program.List);
+                                Program.List.TryAdd(rbq.Id, rbqx);
+                            }
+                            else
+                            {
+                                rbqItem.Id = rbq.Id;
+                                rbqItem.GagId = gag.Id;
+                                rbqItem.StartLockTime = tm.Ticks;
+                                rbqItem.LockCount = gag.UnLockCount;
+                                rbqItem.ResetTimer();
+                                Program.List.TryAdd(rbq.Id, rbqItem);
+                            }
+
+                            botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                            botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> {gag.EnhancedLockMsg[R.Next(0, gag.EnhancedLockMsg.Length)]}",
+                                    parseMode: ParseMode.Html,
+                                    disableNotification: true);
                         }
                         else
                         {
-                            rbqItem.Id = rbq.Id;
-                            rbqItem.GagId = gag.Id;
-                            rbqItem.StartLockTime = tm.Ticks;
-                            rbqItem.LockCount = gag.UnLockCount;
-                            rbqItem.ResetTimer();
-                            Program.List.TryAdd(rbq.Id, rbqItem);
+                            botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                            botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    text: "要加固的口塞不存在!",
+                                    parseMode: ParseMode.Html,
+                                    disableNotification: true);
                         }
-
-                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                        botClient.SendTextMessageAsync(
-                                chatId: message.Chat.Id,
-                                text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> {gag.EnhancedLockMsg[R.Next(0, gag.EnhancedLockMsg.Length)]}",
-                                parseMode: ParseMode.Html,
-                                disableNotification: true);
                     }
                 }
                 #endregion

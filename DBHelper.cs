@@ -89,7 +89,7 @@ namespace RBQBot
         #region GagItem Operate
         public int GetGagItemCount() => gagItemCol.Count();
 
-        public void AddGagItem(string gagName, long limitPoint, long unLockCount, string[] selfLockMsg = null, string[] lockMsg = null, string[] enhancedLockMsg = null, string[] unlockMsg = null)
+        public void AddGagItem(string gagName, long limitPoint, long unLockCount, bool showLimit, bool showUnlock, string[] selfLockMsg = null, string[] lockMsg = null, string[] enhancedLockMsg = null, string[] unlockMsg = null)
         {
             if (selfLockMsg == null) selfLockMsg = defaultSelfLockMsg;
             if (lockMsg == null) lockMsg = defaultLockMsg;
@@ -104,7 +104,9 @@ namespace RBQBot
                 SelfLockMsg = selfLockMsg,
                 LockMsg = lockMsg,
                 EnhancedLockMsg = enhancedLockMsg,
-                UnLockMsg = unlockMsg
+                UnLockMsg = unlockMsg,
+                ShowLimit = showLimit,
+                ShowUnlock = showUnlock
             };
             gagItemCol.Insert(obj);
         }
