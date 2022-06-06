@@ -417,7 +417,6 @@ namespace RBQBot
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
                         } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误!可能用户已验证!", false, null, 30);
-
                     } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
                     break;
                 case "adminkick":
@@ -438,7 +437,6 @@ namespace RBQBot
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
                         } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误!可能用户已移除!", false, null, 30);
-
                     } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
                     break;
                 default:
@@ -514,7 +512,7 @@ namespace RBQBot
 
             if (inlineQuery.From.IsBot == false && (inlineQuery.ChatType == ChatType.Supergroup || inlineQuery.ChatType == ChatType.Group) == true)
             {
-                //显示的结果集合
+                // 显示的结果集合 // 这里不能返回空消息,不然必定不显示
                 InlineQueryResult[] results = {
                     new InlineQueryResultArticle(
                         id: "0", // 这个结果的唯一标识符 id
@@ -528,10 +526,10 @@ namespace RBQBot
                         id: "2",
                         title: "查询口塞列表",
                         inputMessageContent: new InputTextMessageContent(GetAllGag())),
-                    new InlineQueryResultArticle(
-                        id: "3",
-                        title: "使用说明",
-                        inputMessageContent: new InputTextMessageContent(GetUsageHelp))
+                    //new InlineQueryResultArticle(
+                    //    id: "3",
+                    //    title: "使用说明",
+                    //    inputMessageContent: new InputTextMessageContent(GetUsageHelp))
                 };
 
                 botClient.AnswerInlineQueryAsync(
@@ -1053,14 +1051,11 @@ namespace RBQBot
                     //    new [] {
                     //        InlineKeyboardButton.WithCallbackData(text: "管理通过", callbackData: $"adminverify {message.From.Id}"),
                     //        InlineKeyboardButton.WithCallbackData(text: "管理踢出", callbackData: $"adminkick {message.From.Id}"),
-                    //    },
-                    //    new [] {
-                    //        InlineKeyboardButton.WithCallbackData(text: "测试中", callbackData: "asdasdasda"),
-                    //    },
+                    //    }
                     //});
                     //var result = botClient.SendTextMessageAsync(
                     //    chatId: message.Chat.Id,
-                    //    text: "test",
+                    //    text: "测试登录验证",
                     //    disableNotification: true,
                     //    replyToMessageId: message.MessageId,
                     //    replyMarkup: inlineKeyboard).Result;

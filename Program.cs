@@ -58,14 +58,6 @@ namespace RBQBot
         }
     }
 
-    class Foo
-    {
-        public string GetAssemblyVersion()
-        {
-            return GetType().Assembly.GetName().Version.ToString();
-        }
-    }
-
     class Program
     {
         internal static DBHelper DB;
