@@ -439,7 +439,7 @@ namespace RBQBot
                                 disableNotification: true);
                         } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误!可能用户已移除!", false, null, 30);
 
-                    } botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
+                    } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
                     break;
                 default:
                     botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "", false, null, 30);
