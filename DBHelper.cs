@@ -34,7 +34,7 @@ namespace RBQBot
         private readonly string[] defaultEnhancedLockMsg = { "修好了口塞!\n顺便展示了钥匙并丢到了一边!" };
 
         /// <summary>
-        /// [绒布球] 挣脱了被坏人们安装的超大号默认口塞! Ta感觉自己可以容纳更大的尺寸了呢!
+        /// [绒布球] 挣脱了被人们安装的 超大号默认口塞! Ta感觉自己可以容纳更大的尺寸了呢!
         /// </summary>
         private readonly string[] defaultUnlockMsg = { "Ta感觉自己可以容纳更大的尺寸了呢!" };
 

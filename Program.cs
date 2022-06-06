@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading;
 
 using Telegram.Bot;
@@ -57,6 +58,14 @@ namespace RBQBot
         }
     }
 
+    class Foo
+    {
+        public string GetAssemblyVersion()
+        {
+            return GetType().Assembly.GetName().Version.ToString();
+        }
+    }
+
     class Program
     {
         internal static DBHelper DB;
@@ -64,9 +73,16 @@ namespace RBQBot
         /// <summary>int是RBQStatus的主键ID, RBQList是RBQStatus的衍生封装</summary>
         internal static ConcurrentDictionary<int, RBQList> List;
         internal static ConcurrentDictionary<long, WaitBan> BanList;
+        /// <summary>用户验证超时时间(毫秒)</summary>
+        internal static double UserVerifyTime = 120000;
+        /// <summary>口塞锁定时间(分钟)</summary>
+        internal static int LockTime = 10;
+        internal static string Version = "1.0.1.0";
+        internal static DateTime StartTime;
 
         static void Main(string[] args)
         {
+            StartTime = DateTime.UtcNow.AddHours(8);
             List = new ConcurrentDictionary<int, RBQList>();
             BanList = new ConcurrentDictionary<long, WaitBan>();
 
@@ -118,10 +134,10 @@ namespace RBQBot
             #endregion
 
             DB = new DBHelper();
-
+#if DEBUG
             //DB.AddGagItem("test1", 1, 1, null, null, null, null);
             //DB.AddGagItem("test2", 10, 10, null, null, null, null);
-
+#endif
             #region 恢复内存队列
             var rec = DB.GetAllRBQStatus();
             foreach (var i in rec)
