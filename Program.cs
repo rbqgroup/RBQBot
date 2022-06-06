@@ -127,8 +127,16 @@ namespace RBQBot
 
             DB = new DBHelper();
 #if DEBUG
-            //DB.AddGagItem("test1", 1, 1, null, null, null, null);
-            //DB.AddGagItem("test2", 10, 10, null, null, null, null);
+            if (DB.GetGagItemCount() == 0)
+            {
+                DB.AddGagItem("胡萝卜口塞", 0, 1, true, true, null, null, null, null);
+                DB.AddGagItem("口塞球", 5, 3, true, true, null, null, null, null);
+                DB.AddGagItem("充气口塞球", 15, 10, true, true, null, null, null, null);
+                DB.AddGagItem("深喉口塞", 25, 20, true, true, null, null, null, null);
+                DB.AddGagItem("金属开口器", 50, 45, true, true, null, null, null, null);
+                DB.AddGagItem("炮机口塞", 100, 80, true, false, null, null, null, null);
+                DB.AddGagItem("超级口塞", 1000, 120, false, false, null, null, null, null);
+            }
 #endif
             #region 恢复内存队列
             var rec = DB.GetAllRBQStatus();
