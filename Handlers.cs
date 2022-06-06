@@ -1484,7 +1484,7 @@ namespace RBQBot
                             botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                             botClient.SendTextMessageAsync(
                                 chatId: message.Chat.Id,
-                                text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 的绒度不够使用 {gag.Name}!",
+                                text: $"<a href=\"tg://user?id={message.From.Id}\">绒布球</a> 的绒度不够使用 {gag.Name}!",
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
                         }
