@@ -11,23 +11,28 @@ using Telegram.Bot.Extensions.Polling;
 
 namespace RBQBot
 {
+    /// <summary>封装的自动超时移除</summary>
     public class WaitBan
     {
+        ITelegramBotClient botClient;
+
         System.Timers.Timer tm;
         public int FailCount;
         public long ChatId;
         public long UserId;
         public int CallbackMsgId;
-        object obj;
-        ITelegramBotClient botClient;
 
-        public WaitBan(long chatId, long userId, int callBackMsgId, double timeout, object userBanList, ITelegramBotClient botClient)
+        /// <summary>定时自动移除未验证用户</summary>
+        /// <param name="chatId">群组ID</param>
+        /// <param name="userId">用户ID</param>
+        /// <param name="callBackMsgId">验证消息的ID</param>
+        /// <param name="timeout">超时时间(毫秒)</param>
+        public WaitBan(long chatId, long userId, int callBackMsgId, double timeout, ITelegramBotClient botClient)
         {
             FailCount = 0;
             ChatId=chatId;
             UserId=userId;
             CallbackMsgId = callBackMsgId;
-            obj=userBanList;
             this.botClient=botClient;
 
             tm = new System.Timers.Timer();
@@ -37,12 +42,11 @@ namespace RBQBot
             tm.Start();
         }
 
+        /// <summary>停止计时器</summary>
         public void Stop() => tm.Stop();
 
         private void Tm_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            var list = (ConcurrentDictionary<long, WaitBan>)obj;
-
             botClient.BanChatMemberAsync(ChatId, UserId);
             botClient.UnbanChatMemberAsync(ChatId, UserId);
 
@@ -53,7 +57,7 @@ namespace RBQBot
                 parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
                 disableNotification: true);
 
-            list.TryRemove(UserId, out WaitBan _);
+            Program.BanList.TryRemove(UserId, out _);
         }
     }
 
@@ -61,19 +65,24 @@ namespace RBQBot
     {
         internal static DBHelper DB;
         internal static TelegramBotClient Bot;
-        /// <summary>int是RBQStatus的主键ID, RBQList是RBQStatus的衍生封装</summary>
+
+        /// <summary>口塞内存队列 (int输入RBQStatus的主键ID)</summary>
         internal static ConcurrentDictionary<int, RBQList> List;
+        /// <summary>进群验证队列 (long输入用户的Id)</summary>
         internal static ConcurrentDictionary<long, WaitBan> BanList;
+
         /// <summary>用户验证超时时间(毫秒)</summary>
         internal static double UserVerifyTime = 120000;
         /// <summary>口塞锁定时间(分钟)</summary>
         internal static int LockTime = 10;
+
         internal static string Version = "1.0.1.5";
         internal static DateTime StartTime;
 
         static void Main(string[] args)
         {
             StartTime = DateTime.UtcNow.AddHours(8);
+
             List = new ConcurrentDictionary<int, RBQList>();
             BanList = new ConcurrentDictionary<long, WaitBan>();
 
@@ -114,7 +123,7 @@ namespace RBQBot
                 if (i.LockCount > 0 && DateTime.UtcNow.AddHours(8) < tm)
                 {
                     var timeout = (tm - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
-                    var rbqx = new RBQList(i.Id, i.LockCount, i.GagId, timeout, Program.List);
+                    var rbqx = new RBQList(i.Id, i.LockCount, i.GagId, timeout);
                     Program.List.TryAdd(i.Id, rbqx);
                 }
             }
