@@ -16,9 +16,16 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace RBQBot
 {
+    public struct CpuMemStruct
+    {
+        public double UsedCpu;
+        public double UsedMem;
+    }
+
     public class Handlers
     {
 
+        #region 命令功能封装
         public static string GetRBQSay()
         {
             string[] charta = {
@@ -88,26 +95,20 @@ namespace RBQBot
             var gag = Program.DB.GetAllGagItems();
             var sb = new StringBuilder();
             sb.AppendLine($"一共有 {count} 个口塞.");
-            sb.AppendLine($"{"口塞名字", 0}{"要求绒度", 15}{"挣扎次数", 20}");
+            sb.AppendLine($"{"口塞名字",0}{"要求绒度",15}{"挣扎次数",20}");
             sb.AppendLine("================================");
             foreach (var i in gag)
             {
                 var limit = i.ShowLimit ? i.LimitPoint.ToString() : "??";
                 var unlock = i.ShowUnlock ? i.UnLockCount.ToString() : "??";
-                sb.AppendLine($"{i.Name, 0}{limit, 15}{unlock, 25}");
+                sb.AppendLine($"{i.Name,0}{limit,15}{unlock,25}");
             }
             sb.AppendLine("================================");
             return sb.ToString();
         }
 
-        public const string GetUsageHelp = "";
-
-        //public static string SwitchRBQUse(long telegramId)
-        //{
-
-        //    Console.WriteLine();
-        //    return "";
-        //}
+        public const string GetUsageHelp = "自己看着写";
+        #endregion
 
         public static Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
@@ -133,10 +134,10 @@ namespace RBQBot
                 // UpdateType.PreCheckoutQuery:
                 // UpdateType.Poll:
                 //UpdateType.EditedMessage => BotOnMessageReceived(botClient, update.EditedMessage!),
-                UpdateType.CallbackQuery => BotOnCallbackQueryReceived(botClient, update.CallbackQuery!),
                 //UpdateType.ChosenInlineResult => BotOnChosenInlineResultReceived(botClient, update.ChosenInlineResult!),
                 #endregion
 
+                UpdateType.CallbackQuery => BotOnCallbackQueryReceived(botClient, update.CallbackQuery!),
                 UpdateType.Message => BotOnMessageReceived(botClient, update.Message!),
                 UpdateType.InlineQuery => BotOnInlineQueryReceived(botClient, update.InlineQuery!),
                 _ => UnknownUpdateHandlerAsync(botClient, update)
@@ -347,7 +348,7 @@ namespace RBQBot
             #endregion
         }
 
-        // Process Inline Keyboard callback data
+        /// <summary>处理Bot收到的点击按钮的数据(例如验证按钮返回的数据)</summary>
         private static async Task BotOnCallbackQueryReceived(ITelegramBotClient botClient, CallbackQuery callbackQuery)
         {
             var data = callbackQuery.Data.Split(' ');
@@ -436,14 +437,16 @@ namespace RBQBot
                             wait4.Stop();
                             botClient.DeleteMessageAsync(wait4.ChatId, wait4.CallbackMsgId);
                             botClient.BanChatMemberAsync(wait4.ChatId, wait4.UserId);
-                            botClient.UnbanChatMemberAsync(wait4.ChatId, wait4.UserId);
+                            //botClient.UnbanChatMemberAsync(wait4.ChatId, wait4.UserId);
                             botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您已移除该用户!", false, null, 30);
 
                             botClient.SendTextMessageAsync(
                                 chatId: wait4.ChatId,
-                                text: $"该 <a href=\"tg://user?id={wait4.UserId}\">新绒布球</a> 已被管理员移除!",
+                                text: $"该 <a href=\"tg://user?id={wait4.UserId}\">新绒布球</a> 已被管理员永久移除!",
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
+
+                            if (Program.DB.GetRBQStatusExist(wait4.ChatId, wait4.UserId) == true) Program.DB.DelRBQStatus(wait4.ChatId, wait4.UserId);
                         } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误!可能用户已移除!", false, null, 30);
                     } else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
                     break;
@@ -457,21 +460,14 @@ namespace RBQBot
             }
         }
 
-        /// <summary>未知api处理</summary>
-        /// <param name="botClient"></param>
-        /// <param name="update"></param>
-        /// <returns></returns>
+        /// <summary>未知api处理(可能是tg服务器的api更新了或者单纯没有去拦截而已)</summary>
         private static Task UnknownUpdateHandlerAsync(ITelegramBotClient botClient, Update update)
         {
-            Console.WriteLine($"未知更新类型: {update.Type}, 可能是API变更");
+            //Console.WriteLine($"未知更新类型: {update.Type}, 可能是API变更");
             return Task.CompletedTask;
         }
 
-        #region RecvMsg Process
-        /// <summary>内联查询处理</summary>
-        /// <param name="botClient"></param>
-        /// <param name="inlineQuery"></param>
-        /// <returns></returns>
+        /// <summary>内联查询处理(就是直接输入@Bot名 空格后返回的按钮/功能)</summary>
         private static async Task BotOnInlineQueryReceived(ITelegramBotClient botClient, InlineQuery inlineQuery)
         {
             #region OldCode
@@ -534,10 +530,10 @@ namespace RBQBot
                         id: "2",
                         title: "查询口塞列表",
                         inputMessageContent: new InputTextMessageContent(GetAllGag())),
-                    //new InlineQueryResultArticle(
-                    //    id: "3",
-                    //    title: "使用说明",
-                    //    inputMessageContent: new InputTextMessageContent(GetUsageHelp))
+                    new InlineQueryResultArticle(
+                        id: "3",
+                        title: "使用说明",
+                        inputMessageContent: new InputTextMessageContent(GetUsageHelp))
                 };
 
                 botClient.AnswerInlineQueryAsync(
@@ -549,15 +545,13 @@ namespace RBQBot
         }
 
         /// <summary>选择内联结果接收</summary>
-        /// <param name="botClient"></param>
-        /// <param name="chosenInlineResult"></param>
-        /// <returns></returns>
         //private static Task BotOnChosenInlineResultReceived(ITelegramBotClient botClient, ChosenInlineResult chosenInlineResult)
         //{
         //    Console.WriteLine($"Received inline result: {chosenInlineResult.ResultId} {chosenInlineResult.InlineMessageId}");
         //    return Task.CompletedTask;
         //}
 
+        /// <summary>群组加入了新人的处理</summary>
         private static void ChatMembersAdded(ITelegramBotClient botClient, Message message)
         {
             for (int i = 0; i < message.NewChatMembers.Length; i++)
@@ -600,8 +594,8 @@ namespace RBQBot
                         replyMarkup: inlineKeyboard,
                         disableNotification: true).Result;
 
-                    var b = new WaitBan(message.Chat.Id, message.From.Id, result.MessageId, Program.UserVerifyTime, Program.BanList, botClient);
-                    Program.BanList.TryAdd(message.From.Id, b);
+                    var b = new WaitBan(message.Chat.Id, message.NewChatMembers[i].Id, result.MessageId, Program.UserVerifyTime, Program.BanList, botClient);
+                    Program.BanList.TryAdd(message.NewChatMembers[i].Id, b);
                 }
                 else
                 {
@@ -624,12 +618,13 @@ namespace RBQBot
                 }
             }
         }
-
+        
+        /// <summary>群组有人离开的处理</summary>
         private static void ChatMemberLeft(ITelegramBotClient botClient, Message message)
         {
             if (message.LeftChatMember.IsBot != true)
             {
-                Program.DB.DelRBQStatus(message.Chat.Id, message.LeftChatMember.Id);
+                //Program.DB.DelRBQStatus(message.Chat.Id, message.LeftChatMember.Id);
                 botClient.SendTextMessageAsync(
                     chatId: message.Chat.Id,
                     text: $"一只 <a href=\"tg://user?id={message.LeftChatMember.Id}\">绒布球</a> 离开了群组.",
@@ -653,6 +648,7 @@ namespace RBQBot
             }
         }
 
+        /// <summary>私聊Bot的处理</summary>
         private static void PrivateMsgProcess(ITelegramBotClient botClient, Message message)
         {
             switch (message.Text.ToLower())
@@ -763,7 +759,7 @@ namespace RBQBot
                                 parseMode: ParseMode.Html,
                                 disableNotification: false).Result;
 
-                            Program.BanList.TryAdd(message.From.Id, ban);
+                            Program.BanList.TryAdd(ban.UserId, ban);
                         }
                         else
                         {
@@ -947,7 +943,6 @@ namespace RBQBot
                 }
             }
         }
-        #endregion
 
         private static int TypeProcess(string msg)
         {
@@ -1069,18 +1064,14 @@ namespace RBQBot
                     //    replyMarkup: inlineKeyboard).Result;
 
                     //var b = new WaitBan(message.Chat.Id, message.From.Id, result.MessageId, 30000, Program.BanList, botClient);
-                    //Program.BanList.TryAdd(message.From.Id, b);
+                    //Program.BanList.TryAdd(message.From.Id, b); // 不能用From id，要用新加入人的ID
 #endif
 
                     break;
             }
         }
 
-        struct CpuMemStruct
-        {
-            public double UsedCpu;
-            public double UsedMem;
-        }
+        
 
         private static async void PingProcess(ITelegramBotClient botClient, Message message)
         {
