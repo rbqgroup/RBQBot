@@ -29,10 +29,10 @@ namespace RBQBot
         /// <summary>口塞锁定时间(分钟)</summary>
         internal static int LockTime = 10;
         /// <summary>启动后等待多久时间用于忽略消息(毫秒)</summary>
-        internal static int WaitTime = 10000;
+        internal static int WaitTime = 5000;
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "1.0.4.0";
+        internal static string Version = "1.0.4.2";
         #endregion
 
         static void Main(string[] args)
