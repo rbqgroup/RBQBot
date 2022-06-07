@@ -249,8 +249,6 @@ namespace RBQBot
 
         public bool AddRBQFroms(long groupId, long rbqId, long userId)
         {
-            if (GetRBQFromExits(groupId, rbqId, userId) != true) return false;
-
             var result = rbqStatusCol.FindOne(x => x.GroupId == groupId && x.RBQId == rbqId);
             if (result != null)
             {
@@ -262,12 +260,21 @@ namespace RBQBot
                 }
                 else
                 {
-                    long[] a = new long[result.FromId.Length + 1];
-                    Array.Copy(result.FromId, 0, a, 0 ,result.FromId.Length);
-                    a[result.FromId.Length + 1] = userId;
-                    result.FromId = a;
-                    rbqStatusCol.Update(result);
-                    return true;
+                    if (result.FromId.Length == 0)
+                    {
+                        result.FromId = new long[] { userId };
+                        rbqStatusCol.Update(result);
+                        return true;
+                    }
+                    else
+                    {
+                        long[] a = new long[result.FromId.Length + 1];
+                        Array.Copy(result.FromId, 0, a, 0, result.FromId.Length);
+                        a[result.FromId.Length] = userId;
+                        result.FromId = a;
+                        rbqStatusCol.Update(result);
+                        return true;
+                    }
                 }
             } return false;
         }
@@ -280,6 +287,7 @@ namespace RBQBot
                 RBQId = rbqId,
                 LockCount = lockCount,
                 AnyUsed = anyUsed,
+                StartLockTime = DateTime.UnixEpoch.Ticks,
             };
             rbqStatusCol.Insert(obj);
         }
@@ -324,6 +332,28 @@ namespace RBQBot
         {
             var result = rbqStatusCol.FindOne(x => x.GroupId == groupId && x.RBQId == rbqId);
             if (result != null) return true;
+            return false;
+        }
+
+        public bool GetRBQCanLock(long groupId, long rbqId)
+        {
+            var result = rbqStatusCol.FindOne(x => x.GroupId == groupId && x.RBQId == rbqId);
+            if (result != null)
+            {
+                var rbqP = GetRBQPoint(rbqId);
+                var cd = 0;
+                switch (rbqP)
+                {
+                    case <= 100: cd = 60; break;
+                    case <= 200: cd = 40; break;
+                    case <= 500: cd = 25; break;
+                    case <= 1000: cd = 15; break;
+                    case > 1000: cd = 10; break;
+                    default: cd = 60; break;
+                }
+                // 锁定时间+超时时间+CD < 当前时间
+                return new DateTime(result.StartLockTime).AddSeconds(cd) < DateTime.UtcNow.AddHours(8);
+            }
             return false;
         }
 
