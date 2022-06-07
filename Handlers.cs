@@ -149,7 +149,12 @@ namespace RBQBot
             {
                 var limit = i.ShowLimit ? i.LimitPoint.ToString() : "??";
                 var unlock = i.ShowUnlock ? i.UnLockCount.ToString() : "??";
-                sb.AppendLine($"{i.Name,0}{limit,15}{unlock,25}");
+
+                var namex = $"{i.Name}   ";
+                limit = $"   {limit}   ";
+                unlock = $"   {unlock}   ";
+
+                sb.AppendLine($"<code>{namex,0}</code>{limit,15}{unlock,25}");
             }
             sb.AppendLine("================================");
             return sb.ToString();
@@ -949,7 +954,7 @@ namespace RBQBot
                     new InlineQueryResultArticle(
                         id: "2",
                         title: "查询口塞列表",
-                        inputMessageContent: new InputTextMessageContent(GetAllGag())),
+                        inputMessageContent: new InputTextMessageContent(GetAllGag()){ ParseMode = ParseMode.Html }),
                     new InlineQueryResultArticle(
                         id: "3",
                         title: "使用说明",
@@ -1015,10 +1020,10 @@ namespace RBQBot
                     }
                     break;
                 case "adminverify":
-                    if (callbackQuery.From.Id != 1324338125) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
+                    if (CheckIsAdmin(botClient, Convert.ToInt64(data[1]), Convert.ToInt64(data[2])) != true) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
                     else if (data.Length > 1)
                     {
-                        if (Program.BanList.TryRemove(Convert.ToInt64(data[1]), out WaitBan wait3) == true)
+                        if (Program.BanList.TryRemove(Convert.ToInt64(data[2]), out WaitBan wait3) == true)
                         {
                             wait3.Stop();
                             botClient.DeleteMessageAsync(wait3.ChatId, wait3.CallbackMsgId);
@@ -1047,10 +1052,10 @@ namespace RBQBot
                     else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
                     break;
                 case "adminkick":
-                    if (callbackQuery.From.Id != 1324338125) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
+                    if (CheckIsAdmin(botClient, Convert.ToInt64(data[1]), Convert.ToInt64(data[2])) != true) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
                     else if (data.Length > 1)
                     {
-                        if (Program.BanList.TryRemove(Convert.ToInt64(data[1]), out WaitBan wait4) == true)
+                        if (Program.BanList.TryRemove(Convert.ToInt64(data[2]), out WaitBan wait4) == true)
                         {
                             wait4.Stop();
                             botClient.DeleteMessageAsync(wait4.ChatId, wait4.CallbackMsgId);
@@ -1295,8 +1300,8 @@ namespace RBQBot
                             InlineKeyboardButton.WithCallbackData(text: "我很可爱,请验证我", callbackData: "verifyme"),
                         },
                         new [] {
-                            InlineKeyboardButton.WithCallbackData(text: "管理通过", callbackData: $"adminverify {message.NewChatMembers[i].Id}"),
-                            InlineKeyboardButton.WithCallbackData(text: "管理踢出", callbackData: $"adminkick {message.NewChatMembers[i].Id}"),
+                            InlineKeyboardButton.WithCallbackData(text: "管理通过", callbackData: $"adminverify {message.Chat.Id} {message.NewChatMembers[i].Id}"),
+                            InlineKeyboardButton.WithCallbackData(text: "管理踢出", callbackData: $"adminkick {message.Chat.Id} {message.NewChatMembers[i].Id}"),
                         },
                     });
 
@@ -1389,6 +1394,7 @@ namespace RBQBot
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
                         text: GetAllGag(),
+                        parseMode: ParseMode.Html,
                         disableNotification: true,
                         replyToMessageId: message.MessageId);
                     break;
@@ -1635,13 +1641,10 @@ namespace RBQBot
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
                         text: GetAllGag(),
+                        parseMode: ParseMode.Html,
                         disableNotification: true,
                         replyToMessageId: message.MessageId);
                     break;
-                case "/rbqpoint":
-                    RBQPointProcess(botClient, message);
-                    break;
-                //case "/verify": // verify已在MsgProcess中处理
                 case "/ping":
                     if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id)) PingProcess(botClient, message);
                     else botClient.SendTextMessageAsync(
@@ -1650,11 +1653,15 @@ namespace RBQBot
                             disableNotification: true,
                             replyToMessageId: message.MessageId);
                     break;
-                case "/help":
-                    Help(botClient, message);
+                case "/rbqpoint":
+                    RBQPointProcess(botClient, message);
                     break;
+                //case "/verify": // verify已在MsgProcess中处理
                 case "/about":
                     About(botClient, message);
+                    break;
+                case "/help":
+                    Help(botClient, message);
                     break;
                 default:
 #if DEBUG
@@ -1664,8 +1671,8 @@ namespace RBQBot
                     //        InlineKeyboardButton.WithCallbackData(text: "我很可爱,请验证我", callbackData: "verifyme"),
                     //    },
                     //    new [] {
-                    //        InlineKeyboardButton.WithCallbackData(text: "管理通过", callbackData: $"adminverify {message.From.Id}"),
-                    //        InlineKeyboardButton.WithCallbackData(text: "管理踢出", callbackData: $"adminkick {message.From.Id}"),
+                    //        InlineKeyboardButton.WithCallbackData(text: "管理通过", callbackData: $"adminverify {message.Chat.Id} {message.From.Id}"),
+                    //        InlineKeyboardButton.WithCallbackData(text: "管理踢出", callbackData: $"adminkick {message.Chat.Id} {message.From.Id}"),
                     //    }
                     //});
                     //var result = botClient.SendTextMessageAsync(
@@ -1675,10 +1682,14 @@ namespace RBQBot
                     //    replyToMessageId: message.MessageId,
                     //    replyMarkup: inlineKeyboard).Result;
 
-                    //var b = new WaitBan(message.Chat.Id, message.From.Id, result.MessageId, 30000, Program.BanList, botClient);
+                    //var b = new WaitBan(message.Chat.Id, message.From.Id, result.MessageId, 120000, botClient);
                     //Program.BanList.TryAdd(message.From.Id, b); // 不能用From id，要用新加入人的ID
 #endif
-
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        text: "命令错误! 请输入 /help 查看命令!",
+                        disableNotification: true,
+                        replyToMessageId: message.MessageId);
                     break;
             }
         }
