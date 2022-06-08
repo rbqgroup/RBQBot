@@ -194,7 +194,25 @@ namespace RBQBot
         #endregion
 
         #region 私聊Bot命令功能封装
-
+        public static void Debug(ITelegramBotClient botClient, Message message)
+        {
+            if (Program.IsDebug == true && message.From.Id == Program.DebugUserId)
+            {
+                Program.IsDebug = false;
+                botClient.SendTextMessageAsync(
+                chatId: message.Chat.Id,
+                text: "调试功能已关闭.",
+                disableNotification: true);
+            }
+            else if (Program.IsDebug == false && message.From.Id == Program.DebugUserId)
+            {
+                Program.IsDebug = true;
+                botClient.SendTextMessageAsync(
+                chatId: message.Chat.Id,
+                text: "调试功能已开启,您现在可以转发任意消息给这个Bot来查看消息的数据.",
+                disableNotification: true);
+            }
+        }
         #endregion
 
         #region 群内命令功能封装
@@ -228,13 +246,13 @@ namespace RBQBot
                             if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id) != true)
                             {
                                 botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                                var result = botClient.SendTextMessageAsync(
+                                /*var result = */botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 试图修改别人的开关!",
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图修改 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 的开关! 但Ta没有权限!",
                                     parseMode: ParseMode.Html,
-                                    disableNotification: true).Result;
+                                    disableNotification: true)/*.Result*/;
 
-                                ThreadPool.QueueUserWorkItem(o => { DelayDeleteMessage(botClient, message.Chat.Id, result.MessageId, 5000); });
+                                //ThreadPool.QueueUserWorkItem(o => { DelayDeleteMessage(botClient, message.Chat.Id, result.MessageId, 5000); });
                             }
                             else
                             {
@@ -244,7 +262,7 @@ namespace RBQBot
                                     botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                     botClient.SendTextMessageAsync(
                                         chatId: message.Chat.Id,
-                                        text: $"<a href=\"tg://user?id={message.From.Id}\">管理员</a> 已将 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 变为公用球!",
+                                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已将 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 变为公用型绒布球!",
                                         parseMode: ParseMode.Html,
                                         disableNotification: true);
                                 }
@@ -254,7 +272,7 @@ namespace RBQBot
                                     botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                     botClient.SendTextMessageAsync(
                                         chatId: message.Chat.Id,
-                                        text: $"<a href=\"tg://user?id={message.From.Id}\">管理员</a> 已禁止 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 被公用!",
+                                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已将 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 变为个人型绒布球!",
                                         parseMode: ParseMode.Html,
                                         disableNotification: true);
                                 }
@@ -281,7 +299,7 @@ namespace RBQBot
                                     botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                     botClient.SendTextMessageAsync(
                                             chatId: message.Chat.Id,
-                                            text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 试图给<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"> 绒布球 </a>使用 {comm[1]} ,但对方拒绝了Ta的口塞!",
+                                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{comm[1]}</code> ,但对方不是公用型绒布球!",
                                             parseMode: ParseMode.Html,
                                             disableNotification: true);
                                 }
@@ -294,7 +312,7 @@ namespace RBQBot
                                         botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                         botClient.SendTextMessageAsync(
                                                 chatId: message.Chat.Id,
-                                                text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 使用 {comm[1]} ,但Ta已经使用过一次了!",
+                                                text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{comm[1]}</code>,\n但 <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已经添加/加固过 <a href=\"tg://user?id={message.ReplyToMessage?.From.Id}\">{message.ReplyToMessage?.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 的口塞了!",
                                                 parseMode: ParseMode.Html,
                                                 disableNotification: true);
                                     }
@@ -312,7 +330,7 @@ namespace RBQBot
                                                 botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                                 botClient.SendTextMessageAsync(
                                                         chatId: message.Chat.Id,
-                                                        text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 已经有一个 {gag.Name} 了!\n<a href=\"tg://user?id={message.From.Id}\">您</a> 可以使用/gag 回复这只绒布球来加固.",
+                                                        text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 已经有一个 <code>{gag.Name}</code> 了!\n<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 可以使用/gag 回复这只绒布球来加固.",
                                                         parseMode: ParseMode.Html,
                                                         disableNotification: true);
                                             }
@@ -339,7 +357,7 @@ namespace RBQBot
                                                     botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                                     botClient.SendTextMessageAsync(
                                                         chatId: message.Chat.Id,
-                                                        text: $"Ta 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 使用 {gag.Name},但绒布球的绒度不够!",
+                                                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{gag.Name}</code>, 但绒布球的绒度不够!",
                                                         parseMode: ParseMode.Html,
                                                         disableNotification: true);
                                                 }
@@ -350,7 +368,7 @@ namespace RBQBot
                                                         botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                                         botClient.SendTextMessageAsync(
                                                         chatId: message.Chat.Id,
-                                                        text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 使用 {gag.Name},但绒布球刚挣脱没多久!",
+                                                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{gag.Name}</code>, 但绒布球刚挣脱没多久!",
                                                         parseMode: ParseMode.Html,
                                                         disableNotification: true);
                                                     }
@@ -368,7 +386,7 @@ namespace RBQBot
 
                                                         Program.DB.SetRBQStatus(rbq);
 
-                                                        var msg = $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 带上了 {comm[1]}!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
+                                                        var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 戴上了 <code>{comm[1]}</code>!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
 
                                                         #region 内存队列存在检查
                                                         if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -413,7 +431,7 @@ namespace RBQBot
                                                 rbq.GagId = gag.Id;
                                                 Program.DB.SetRBQStatus(rbq);
 
-                                                var msg = $"<a href=\"tg://user?id={message.From.Id}\">管理员</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> 带上了 {comm[1]}!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
+                                                var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 戴上了 {comm[1]}!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
 
                                                 #region 内存队列存在检查
                                                 if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -459,7 +477,7 @@ namespace RBQBot
                             botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                             botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\">您</a> 已经给<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"> 绒布球 </a>加固过了,就放过Ta吧.",
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已经给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 加固过口塞了,就放过Ta吧.",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
                         }
@@ -503,7 +521,7 @@ namespace RBQBot
                                 botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                 botClient.SendTextMessageAsync(
                                         chatId: message.Chat.Id,
-                                        text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">绒布球</a> {gag.EnhancedLockMsg[R.Next(0, gag.EnhancedLockMsg.Length)]}",
+                                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> {gag.EnhancedLockMsg[R.Next(0, gag.EnhancedLockMsg.Length)]}",
                                         parseMode: ParseMode.Html,
                                         disableNotification: true);
                             }
@@ -537,7 +555,7 @@ namespace RBQBot
 
                         botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a>可以被公开调教了!",
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 可以被公开调教了!",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
                         return;
@@ -548,7 +566,7 @@ namespace RBQBot
 
                         botClient.SendTextMessageAsync(
                                         chatId: message.Chat.Id,
-                                        text: $"<a href=\"tg://user?id={message.From.Id}\">Ta</a>不能再被公开调教了!",
+                                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 不愿意再被公开调教了!",
                                         parseMode: ParseMode.Html,
                                         disableNotification: true);
                         return;
@@ -581,7 +599,7 @@ namespace RBQBot
                             rbq.GagId = gag.Id;
                             Program.DB.SetRBQStatus(rbq);
 
-                            var msg = $"<a href=\"tg://user?id={message.From.Id}\">绒布球</a> 给自己带上了 {comm[1]}!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
+                            var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
 
                             #region 内存队列存在检查
                             if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -617,7 +635,7 @@ namespace RBQBot
                                 botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                 botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\">绒布球</a> 的绒度不够使用 {gag.Name}!",
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 的绒度不够使用 <code>{gag.Name}</code>!",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
                             }
@@ -634,7 +652,7 @@ namespace RBQBot
                                 rbq.GagId = gag.Id;
                                 Program.DB.SetRBQStatus(rbq);
 
-                                var msg = $"<a href=\"tg://user?id={message.From.Id}\">绒布球</a> 给自己带上了 {comm[1]}!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
+                                var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
 
                                 #region 内存队列存在检查
                                 if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -703,7 +721,7 @@ namespace RBQBot
                     botClient.SendTextMessageAsync(
                             chatId: message.Chat.Id,
                             replyToMessageId: message.MessageId,
-                            text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">Ta</a> 的绒度为 {point}",
+                            text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 的绒度为 {point}",
                             parseMode: ParseMode.Html,
                             disableNotification: true);
                 }
@@ -715,7 +733,7 @@ namespace RBQBot
                 botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
                         replyToMessageId: message.MessageId,
-                        text: $"<a href=\"tg://user?id={message.From.Id}\">您</a> 的绒度为 {point}",
+                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 的绒度为 {point}",
                         parseMode: ParseMode.Html,
                         disableNotification: true);
             }
@@ -812,7 +830,7 @@ namespace RBQBot
             botClient.SendTextMessageAsync(
                     chatId: message.Chat.Id,
                     replyToMessageId: message.MessageId,
-                    text: $"<a href=\"tg://user?id={message.From.Id}\">您</a> 的绒度为 {point}",
+                    text: $"您的绒度为 {point}",
                     parseMode: ParseMode.Html,
                     disableNotification: true);
         }
@@ -945,7 +963,7 @@ namespace RBQBot
                 InlineQueryResult[] results = {
                     new InlineQueryResultArticle(
                         id: "0", // 这个结果的唯一标识符 id
-                        title: "说绒话",
+                        title: "说猫话",
                         inputMessageContent: new InputTextMessageContent(GetRBQSay())),
                     new InlineQueryResultArticle(
                         id: "1",
@@ -980,14 +998,19 @@ namespace RBQBot
                     else
                     {
                         wait.Stop();
+
+                        var result = botClient.GetChatMemberAsync(wait.ChatId, wait.UserId).Result;
+
                         botClient.DeleteMessageAsync(wait.ChatId, wait.CallbackMsgId);
                         botClient.BanChatMemberAsync(wait.ChatId, wait.UserId);
                         botClient.UnbanChatMemberAsync(wait.ChatId, wait.UserId);
                         botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "祝您身体健康,再见!", true, null, 30);
 
+                        
+
                         botClient.SendTextMessageAsync(
                                 chatId: wait.ChatId,
-                                text: $"由于 <a href=\"tg://user?id={wait.UserId}\">Ta</a> 的主动要求,Ta已被移出本群.",
+                                text: $"由于 <a href=\"tg://user?id={wait.UserId}\">{result.User?.FirstName} {result.User?.LastName}</a> 的主动要求,Ta已被移出本群.",
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
                     }
@@ -1012,9 +1035,11 @@ namespace RBQBot
                             CanPinMessages = false
                         }, DateTime.UtcNow.AddYears(2));
 
+                        var result = botClient.GetChatMemberAsync(wait2.ChatId, wait2.UserId).Result;
+
                         botClient.SendTextMessageAsync(
                             chatId: wait2.ChatId,
-                            text: $"欢迎 <a href=\"tg://user?id={wait2.UserId}\">新绒布球</a> 加入!",
+                            text: $"欢迎 <a href=\"tg://user?id={wait2.UserId}\">{result.User?.FirstName} {result.User?.LastName}</a> 加入!",
                             parseMode: ParseMode.Html,
                             disableNotification: true);
                     }
@@ -1041,9 +1066,11 @@ namespace RBQBot
                                 CanPinMessages = false
                             }, DateTime.UtcNow.AddYears(2));
 
+                            var result = botClient.GetChatMemberAsync(wait3.ChatId, wait3.UserId).Result;
+
                             botClient.SendTextMessageAsync(
                                 chatId: wait3.ChatId,
-                                text: $"欢迎管理员批准的 <a href=\"tg://user?id={wait3.UserId}\">新绒布球</a> 加入!",
+                                text: $"欢迎管理员批准的 <a href=\"tg://user?id={wait3.UserId}\">{result.User?.FirstName} {result.User?.LastName}</a> 加入!",
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
                         }
@@ -1058,6 +1085,9 @@ namespace RBQBot
                         if (Program.BanList.TryRemove(Convert.ToInt64(data[2]), out WaitBan wait4) == true)
                         {
                             wait4.Stop();
+
+                            var result = botClient.GetChatMemberAsync(wait4.ChatId, wait4.UserId).Result;
+
                             botClient.DeleteMessageAsync(wait4.ChatId, wait4.CallbackMsgId);
                             botClient.BanChatMemberAsync(wait4.ChatId, wait4.UserId);
                             //botClient.UnbanChatMemberAsync(wait4.ChatId, wait4.UserId);
@@ -1065,7 +1095,7 @@ namespace RBQBot
 
                             botClient.SendTextMessageAsync(
                                 chatId: wait4.ChatId,
-                                text: $"该 <a href=\"tg://user?id={wait4.UserId}\">新绒布球</a> 已被管理员永久移除!",
+                                text: $"<a href=\"tg://user?id={wait4.UserId}\">{result.User?.FirstName} {result.User?.LastName}</a> 已被管理员永久移除!",
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
 
@@ -1077,10 +1107,7 @@ namespace RBQBot
                     break;
                 default:
                     botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "", false, null, 30);
-                    var UserNick = "";
-                    if (string.IsNullOrEmpty(callbackQuery.From.FirstName) != true) UserNick = callbackQuery.From.FirstName;
-                    if (string.IsNullOrEmpty(callbackQuery.From.LastName) != true) UserNick = $"{UserNick}{callbackQuery.From.LastName}";
-                    Console.WriteLine($"未知 inline 请求,来自 UserId:{callbackQuery.From.Id} UserName:{callbackQuery.From.Username} 昵称:{UserNick} 请求内容:\n{callbackQuery.Data}");
+                    Console.WriteLine($"未知 inline 请求,来自 UserId:{callbackQuery.From.Id} UserName:{callbackQuery.From?.Username} 昵称:{callbackQuery.From.FirstName} {callbackQuery.From?.LastName} 请求内容:\n{callbackQuery?.Data}");
                     break;
             }
         }
@@ -1089,95 +1116,98 @@ namespace RBQBot
         private static async Task BotOnMessageReceived(ITelegramBotClient botClient, Message message)
         {
 #if DEBUG
-            //Console.WriteLine($"RecvMSG! MsgType: {message.Type} | MsgId: {message.MessageId}\r\n" +
-            //        $"ChatType: {message.Chat.Type} | ChatId: {message.Chat.Id} | ChatTitle: {message.Chat.Title}");
+            //Console.WriteLine($"RecvMSG! MsgType: {message.Type} | MsgId: {message.MessageId}\r\nChatType: {message.Chat.Type} | ChatId: {message.Chat.Id} | ChatTitle: {message.Chat.Title}");
 #endif
-
-            if (message.From.IsBot == false)
+            if (Program.IsDebug == true && message.From.Id == Program.DebugUserId) DebugProcess(botClient, message);
+            else
             {
-                switch (message.Type)
+                if (message.From.IsBot == false)
                 {
-                    case MessageType.Text:
-                        switch (message.Chat.Type)
-                        {
-                            case ChatType.Private:
-                                PrivateMsgProcess(botClient, message);
-                                break;
-                            case ChatType.Group:
-                            case ChatType.Supergroup:
-                                MsgProcess(botClient, message);
-                                break;
-                            default:
-                                break;
-                        }
-                        break;
-                    case MessageType.ChatMembersAdded: // Bot & User 加入了群组
-                        if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true) ChatMembersAdded(botClient, message);
-                        break;
-                    case MessageType.ChatMemberLeft: // Bot & User 离开了群组
-                        if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true) ChatMemberLeft(botClient, message);
-                        break;
+                    switch (message.Type)
+                    {
+                        case MessageType.Text:
+                            switch (message.Chat.Type)
+                            {
+                                case ChatType.Private:
+                                    PrivateMsgProcess(botClient, message);
+                                    break;
+                                case ChatType.Group:
+                                case ChatType.Supergroup:
+                                    MsgProcess(botClient, message);
+                                    break;
+                                default:
+                                    break;
+                            }
+                            break;
+                        case MessageType.ChatMembersAdded: // Bot & User 加入了群组
+                            if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true) ChatMembersAdded(botClient, message);
+                            break;
+                        case MessageType.ChatMemberLeft: // Bot & User 离开了群组
+                            if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true) ChatMemberLeft(botClient, message);
+                            break;
 
-                    #region 不使用/拦截的消息类型
-                    //case MessageType.Photo:
-                    //case MessageType.Audio:
-                    //case MessageType.Video:
-                    //case MessageType.Voice:
-                    //case MessageType.Document:
-                    //case MessageType.Sticker:
-                    //case MessageType.Location:
-                    //case MessageType.Contact:
-                    //case MessageType.Venue:
-                    //case MessageType.Game:
-                    //case MessageType.VideoNote:
-                    //case MessageType.Invoice:
-                    //case MessageType.SuccessfulPayment:
-                    //case MessageType.WebsiteConnected:
-                    //case MessageType.ChatTitleChanged:
-                    //case MessageType.ChatPhotoChanged:
-                    //case MessageType.MessagePinned:
-                    //case MessageType.ChatPhotoDeleted:
-                    //case MessageType.GroupCreated:
-                    //case MessageType.SupergroupCreated:
-                    //case MessageType.ChannelCreated:
-                    //case MessageType.MigratedToSupergroup:
-                    //case MessageType.MigratedFromGroup:
-                    //case MessageType.Poll:
-                    //case MessageType.Dice:
-                    //case MessageType.MessageAutoDeleteTimerChanged:
-                    //case MessageType.ProximityAlertTriggered:
-                    //case MessageType.VoiceChatScheduled:
-                    //case MessageType.VoiceChatStarted:
-                    //case MessageType.VoiceChatEnded:
-                    //case MessageType.VoiceChatParticipantsInvited:
-                    //case MessageType.Document:
-                    //case MessageType.MigratedToSupergroup: // 用户权限被提升?
-                    //case MessageType.Unknown:
+                        #region 不使用/拦截的消息类型
+                        //case MessageType.Photo:
+                        //case MessageType.Audio:
+                        //case MessageType.Video:
+                        //case MessageType.Voice:
+                        //case MessageType.Document:
+                        //case MessageType.Sticker:
+                        //case MessageType.Location:
+                        //case MessageType.Contact:
+                        //case MessageType.Venue:
+                        //case MessageType.Game:
+                        //case MessageType.VideoNote:
+                        //case MessageType.Invoice:
+                        //case MessageType.SuccessfulPayment:
+                        //case MessageType.WebsiteConnected:
+                        //case MessageType.ChatTitleChanged:
+                        //case MessageType.ChatPhotoChanged:
+                        //case MessageType.MessagePinned:
+                        //case MessageType.ChatPhotoDeleted:
+                        //case MessageType.GroupCreated:
+                        //case MessageType.SupergroupCreated:
+                        //case MessageType.ChannelCreated:
+                        //case MessageType.MigratedToSupergroup:
+                        //case MessageType.MigratedFromGroup:
+                        //case MessageType.Poll:
+                        //case MessageType.Dice:
+                        //case MessageType.MessageAutoDeleteTimerChanged:
+                        //case MessageType.ProximityAlertTriggered:
+                        //case MessageType.VoiceChatScheduled:
+                        //case MessageType.VoiceChatStarted:
+                        //case MessageType.VoiceChatEnded:
+                        //case MessageType.VoiceChatParticipantsInvited:
+                        //case MessageType.Document:
+                        //case MessageType.MigratedToSupergroup: // 用户权限被提升?
+                        //case MessageType.Unknown:
+                        #endregion
+
+                        case MessageType.Sticker:
+                            StickerProcess(botClient, message);
+                            break;
+                        default:
+                            Console.WriteLine($"收到未处理的消息 消息类型: {message.Chat.Type}");
+                            break;
+                    }
+                    #region Old Command Switch
+                    //Console.WriteLine($"Receive message type: {message.Type}");
+                    //if (message.Type != MessageType.Text)
+                    //    return;
+
+                    //var action = message.Text!.Split(' ')[0] switch
+                    //{
+                    //    "/gag help" => SendInlineKeyboard(botClient, message),
+                    //    "/keyboard" => SendReplyKeyboard(botClient, message),
+                    //    "/remove" => RemoveKeyboard(botClient, message),
+                    //    "/photo" => SendFile(botClient, message),
+                    //    "/request" => RequestContactAndLocation(botClient, message),
+                    //    _ => Usage(botClient, message)
+                    //};
+                    //Message sentMessage = await action;
+                    //Console.WriteLine($"The message was sent with id: {sentMessage.MessageId}");
                     #endregion
-
-                    case MessageType.Sticker:
-                        StickerProcess(botClient, message);
-                        break;
-                    default:
-                        break;
                 }
-                #region Old Command Switch
-                //Console.WriteLine($"Receive message type: {message.Type}");
-                //if (message.Type != MessageType.Text)
-                //    return;
-
-                //var action = message.Text!.Split(' ')[0] switch
-                //{
-                //    "/gag help" => SendInlineKeyboard(botClient, message),
-                //    "/keyboard" => SendReplyKeyboard(botClient, message),
-                //    "/remove" => RemoveKeyboard(botClient, message),
-                //    "/photo" => SendFile(botClient, message),
-                //    "/request" => RequestContactAndLocation(botClient, message),
-                //    _ => Usage(botClient, message)
-                //};
-                //Message sentMessage = await action;
-                //Console.WriteLine($"The message was sent with id: {sentMessage.MessageId}");
-                #endregion
             }
 
             #region Demo Code
@@ -1319,7 +1349,7 @@ namespace RBQBot
 
                     var result = botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
-                        text: $"欢迎 <a href=\"tg://user?id={message.NewChatMembers[i].Id}\">新绒布球</a> 加入!\n请发送 「<code>/verify 我很可爱</code>」 来完成加群验证(点击可复制),否则您将会在120秒后被移出群组.",
+                        text: $"欢迎 <a href=\"tg://user?id={message.From.Id}\">{message.NewChatMembers[i].FirstName} {message.NewChatMembers[i]?.LastName}</a> 加入!\n请发送 「<code>/verify 我很可爱</code>」 或点击下面的按钮来完成加群验证(点击可复制),否则您将会在120秒后被移出群组.",
                         parseMode: ParseMode.Html,
                         replyMarkup: inlineKeyboard,
                         disableNotification: true).Result;
@@ -1333,7 +1363,7 @@ namespace RBQBot
                     {
                         botClient.SendTextMessageAsync(
                             chatId: message.Chat.Id,
-                            text: $"欢迎 <a href=\"tg://user?id={message.NewChatMembers[i].Id}\">新同类</a> 加入!",
+                            text: $"欢迎 <a href=\"tg://user?id={message.NewChatMembers[i].Id}\">新Bot</a> 加入!",
                             parseMode: ParseMode.Html,
                             disableNotification: true);
                     }
@@ -1357,7 +1387,7 @@ namespace RBQBot
                 //Program.DB.DelRBQStatus(message.Chat.Id, message.LeftChatMember.Id);
                 botClient.SendTextMessageAsync(
                     chatId: message.Chat.Id,
-                    text: $"一只 <a href=\"tg://user?id={message.LeftChatMember.Id}\">绒布球</a> 离开了群组.",
+                    text: $"<a href=\"tg://user?id={message.LeftChatMember.Id}\">{message.LeftChatMember.FirstName} {message.LeftChatMember?.LastName}</a> 离开了群组.",
                     parseMode: ParseMode.Html,
                     disableNotification: true);
             }
@@ -1367,13 +1397,13 @@ namespace RBQBot
                 {
                     botClient.SendTextMessageAsync(
                     chatId: message.Chat.Id,
-                    text: $"一只 <a href=\"tg://user?id={message.LeftChatMember.Id}\">同类</a> 离开了群组.",
+                    text: $"一只 <a href=\"tg://user?id={message.LeftChatMember.Id}\">Bot</a> 离开了群组.",
                     parseMode: ParseMode.Html,
                     disableNotification: true);
                 }
                 else
                 {
-                    Console.WriteLine($"本Bot被 UserId:{message.From.Id} {message.From.Username} {message.From.FirstName}{message.From.LastName} 丢出 GroupId:{message.Chat.Id} {message.Chat.Username} {message.Chat.Title}");
+                    Console.WriteLine($"本Bot被 UserId:{message.From.Id} {message.From?.Username} {message.From.FirstName} {message.From?.LastName} 丢出 GroupId:{message.Chat.Id} {message.Chat?.Username} {message.Chat?.Title}");
                 }
             }
         }
@@ -1422,6 +1452,9 @@ namespace RBQBot
                 case "/help":
                     Help(botClient, message);
                     break;
+                case "/debug":
+                    Debug(botClient, message);
+                    break;
                 default:
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
@@ -1450,7 +1483,7 @@ namespace RBQBot
                             botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                             var result = botClient.SendTextMessageAsync(
                                 chatId: message.Chat.Id,
-                                text: $"验证失败! <a href=\"tg://user?id={message.From.Id}\">您</a> 还有 {3-ban.FailCount} 次验证机会.",
+                                text: $"验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 还有 {3-ban.FailCount} 次验证机会.",
                                 parseMode: ParseMode.Html,
                                 disableNotification: false).Result;
 
@@ -1467,7 +1500,7 @@ namespace RBQBot
                             botClient.DeleteMessageAsync(ban.ChatId, ban.CallbackMsgId);
                             botClient.SendTextMessageAsync(
                                 chatId: message.Chat.Id,
-                                text: $"由于多次验证失败! <a href=\"tg://user?id={message.From.Id}\">Ta</a> 已被移出本群.",
+                                text: $"由于多次验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已被移出本群.",
                                 parseMode: ParseMode.Html,
                                 disableNotification: true);
                         }
@@ -1476,11 +1509,13 @@ namespace RBQBot
                     {
                         ban.Stop();
 
+                        var result = botClient.GetChatMemberAsync(ban.ChatId, ban.UserId).Result;
+
                         botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                         botClient.DeleteMessageAsync(ban.ChatId, ban.CallbackMsgId);
                         botClient.SendTextMessageAsync(
                             chatId: message.Chat.Id,
-                            text: $"恭喜这只 <a href=\"tg://user?id={ban.UserId}\">绒布球</a> 验证通过!",
+                            text: $"恭喜 <a href=\"tg://user?id={ban.ChatId}\">{result.User?.FirstName} {result.User?.LastName}</a> 验证通过!",
                             parseMode: ParseMode.Html,
                             disableNotification: true);
                     }
@@ -1542,7 +1577,7 @@ namespace RBQBot
                                 botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                 botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"这只 <a href=\"tg://user?id={message.From.Id}\">绒布球</a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣扎的次数",
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣扎的次数",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
                             }
@@ -1551,8 +1586,7 @@ namespace RBQBot
                                 botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                                 botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    //text: $"这只 <a href=\"tg://user?id={message.From.Id}\">绒布球</a> 试图逃脱口塞的限制!",
-                                    text: $"这只 <a href=\"tg://user?id={message.From.Id}\">绒布球</a> 试图逃脱口塞的限制!",
+                                    text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
                             }
@@ -1576,7 +1610,7 @@ namespace RBQBot
 
                                 botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"这只 <a href=\"tg://user?id={message.From.Id}\">绒布球</a> 成功挣脱了被人们安装的 {gag.Name}!\n{gag.UnLockMsg[R.Next(0, gag.UnLockMsg.Length)]}",
+                                    text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 成功挣脱了被人们安装的 <code>{gag.Name}</code>!\n{gag.UnLockMsg[R.Next(0, gag.UnLockMsg.Length)]}",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
 
@@ -1612,10 +1646,10 @@ namespace RBQBot
             }
             else
             {
-                Console.WriteLine($"ChatId:{message.Chat.Id} ChatName:{message.Chat.Username} ChatNick:{message.Chat.FirstName}{message.Chat.LastName} 试图使用机器人!");
+                Console.WriteLine($"ChatId:{message.Chat.Id} ChatName:{message.Chat?.Username} ChatNick:{message.Chat?.FirstName} {message.Chat?.LastName} 试图使用机器人!");
                 botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
-                        text: $"请联系 <a href=\"tg://user?id=1324338125\">管理员</a> 允许启用本机器人!",
+                        text: $"请联系 <a href=\"tg://user?id={Program.DebugUserId}\">管理员</a> 允许启用本机器人!",
                         parseMode: ParseMode.Html,
                         disableNotification: true);
             }
@@ -1685,6 +1719,7 @@ namespace RBQBot
                     //var b = new WaitBan(message.Chat.Id, message.From.Id, result.MessageId, 120000, botClient);
                     //Program.BanList.TryAdd(message.From.Id, b); // 不能用From id，要用新加入人的ID
 #endif
+                    // "命令错误! 请输入 /help 查看命令!",
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
                         text: "命令错误! 请输入 /help 查看命令!",
@@ -1711,13 +1746,88 @@ namespace RBQBot
                         botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                         botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    //text: $"这只 <a href=\"tg://user?id={message.From.Id}\">绒布球</a> 试图逃脱口塞的限制!",
-                                    text: $"这只 <a href=\"tg://user?id={message.From.Id}\">绒布球</a> 试图逃脱口塞的限制!",
+                                    text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!",
                                     parseMode: ParseMode.Html,
                                     disableNotification: true);
                     }
                 }
             }
+        }
+
+        private static void DebugProcess(ITelegramBotClient botClient, Message message)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"当前聊天类型: {message.Chat.Type} 消息类型: {message.Type} |消息日期: {message.Date} |转发日期: {message.ForwardDate?.ToString()}");
+            sb.AppendLine($"消息发送者Id: <a href=\"tg://user?id={message.From?.Id}\">{message.From?.Id}</a> |是否为Bot: {message.From?.IsBot} |昵称: {message.From?.FirstName} {message.From?.LastName} |用户名: {message.From?.Username} |语言代码: {message.From?.LanguageCode} |是否可以加入的群组: {message.From?.CanJoinGroups} |可以读取所有群内的消息: {message.From?.CanReadAllGroupMessages} |支持内联查询: {message.From?.SupportsInlineQueries}");
+            sb.AppendLine();
+
+            switch (message.Type)
+            {
+                case MessageType.Text:
+                    sb.AppendLine($"转发的消息发送者Id: <a href=\"tg://user?id={message.ForwardFrom?.Id}\">{message.ForwardFrom?.Id}</a> |是否为Bot: {message.ForwardFrom?.IsBot} |昵称: {message.ForwardFrom?.FirstName} {message.ForwardFrom?.LastName} |用户名: {message.ForwardFrom?.Username} |语言代码: {message.ForwardFrom?.LanguageCode} |是否可以加入的群组: {message.ForwardFrom?.CanJoinGroups} |可以读取所有群内的消息: {message.ForwardFrom?.CanReadAllGroupMessages} |支持内联查询: {message.ForwardFrom?.SupportsInlineQueries}");
+                    sb.AppendLine();
+                    break;
+                case MessageType.Photo:
+                    break;
+                case MessageType.Audio:
+                    break;
+                case MessageType.Video:
+                    break;
+                case MessageType.Voice:
+                    break;
+                case MessageType.Document:
+                    break;
+                case MessageType.Sticker:
+                    break;
+                case MessageType.Location:
+                case MessageType.Contact:
+                case MessageType.Venue:
+                case MessageType.Game:
+                case MessageType.VideoNote:
+                case MessageType.Invoice:
+                case MessageType.SuccessfulPayment:
+                case MessageType.WebsiteConnected:
+                case MessageType.ChatMembersAdded:
+                case MessageType.ChatMemberLeft:
+                case MessageType.ChatTitleChanged:
+                case MessageType.ChatPhotoChanged:
+                case MessageType.MessagePinned:
+                case MessageType.ChatPhotoDeleted:
+                case MessageType.GroupCreated:
+                case MessageType.SupergroupCreated:
+                case MessageType.ChannelCreated:
+                case MessageType.MigratedToSupergroup:
+                case MessageType.MigratedFromGroup:
+                case MessageType.Poll:
+                case MessageType.Dice:
+                case MessageType.MessageAutoDeleteTimerChanged:
+                case MessageType.ProximityAlertTriggered:
+                case MessageType.VoiceChatScheduled:
+                case MessageType.VoiceChatStarted:
+                case MessageType.VoiceChatEnded:
+                case MessageType.VoiceChatParticipantsInvited:
+                case MessageType.Unknown:
+                default:
+                    sb.AppendLine("该消息类型未作处理!");
+                    break;
+            }
+
+            //if (string.IsNullOrEmpty(message.From.Username) != true) sb.Append($"@{message.From.Username} ");
+            //else sb.Append("无用户名 ");
+
+            //sb.Append("昵称: ");
+            //if (string.IsNullOrEmpty(message.From.FirstName) != true) sb.Append(message.From.FirstName);
+            //if (string.IsNullOrEmpty(message.From.LastName) != true) sb.Append(message.From.LastName);
+
+            //if (string.IsNullOrEmpty(message.From.LanguageCode) != true) sb.Append(message.From.LanguageCode);
+            //else sb.Append("未知语言代码");
+
+            botClient.SendTextMessageAsync(
+                chatId: message.Chat.Id,
+                replyToMessageId: message.MessageId,
+                text: sb.ToString(),
+                parseMode: ParseMode.Html,
+                disableNotification: true);
         }
 
         #endregion
