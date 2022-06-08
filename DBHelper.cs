@@ -1,6 +1,7 @@
 ﻿using LiteDB;
 using RBQBot.Model;
 using System;
+using System.Collections.Generic;
 
 namespace RBQBot
 {
@@ -77,6 +78,23 @@ namespace RBQBot
             if (result != null) return true;
             return false;
         }
+
+        //public long[] GetAllGroupId()
+        //{
+        //    long[] l = new long[allowGroupCol.Count()];
+        //    var result = allowGroupCol.FindAll();
+        //    if (result != null)
+        //    {
+        //        var c = 0;
+        //        foreach (var i in result)
+        //        {
+        //            l[c] = i.GroupId;
+        //            c++;
+        //        }
+        //        return l;
+        //    }
+        //    return null;
+        //}
 
         //public IEnumerable<AllowGroup> GetGroup(int startId, int stopId)
         //{
@@ -298,7 +316,16 @@ namespace RBQBot
             if (result != null) rbqStatusCol.Delete(result.Id);
         }
 
-        public System.Collections.Generic.IEnumerable<RBQStatus> GetAllRBQStatus() => rbqStatusCol.FindAll();
+        public IEnumerable<RBQStatus> GetAllRBQStatus() => rbqStatusCol.FindAll();
+
+        //public IEnumerable<RBQStatus> GetRBQStatusById(long rbqId)
+        //{
+        //    var result = rbqStatusCol.Find(x => x.RBQId == rbqId);
+        //    if (result != null)
+        //    {
+        //        return result;
+        //    } return null;
+        //}
 
         public bool GetRBQFromExits(long groupId, long rbqId, long userId)
         {
