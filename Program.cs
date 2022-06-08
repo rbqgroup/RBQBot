@@ -39,7 +39,7 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "1.0.5.5";
+        internal static string Version = "1.0.5.6";
 
         internal static readonly string HelpTxt =
             "/count - 查询口塞次数, 只能在群组内使用.\n" +

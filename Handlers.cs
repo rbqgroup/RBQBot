@@ -30,7 +30,7 @@ namespace RBQBot
         /// <returns>合规性,大于0为不合规,等于0合规</returns>
         public static int TypeProcess(string msg)
         {
-            int x = 0;
+            if (msg.IndexOfAny(new char[] { '呜', '哈', '啊', '唔', '嗯', '呃', '哦', '嗷', '呕', '噢', '喔' }) < 0) return 1;
             msg = msg.Replace('呜', ' ');
             msg = msg.Replace('哈', ' ');
             msg = msg.Replace('啊', ' ');
