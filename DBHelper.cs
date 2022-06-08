@@ -378,8 +378,9 @@ namespace RBQBot
                     case > 1000: cd = 10; break;
                     default: cd = 60; break;
                 }
-                // 锁定时间+超时时间+CD < 当前时间
-                return new DateTime(result.StartLockTime).AddSeconds(cd) < DateTime.UtcNow.AddHours(8);
+                // (result.StartLockTime)开始锁定时间+(Program.LockTime)超时时间+CD < 当前时间
+                if (new DateTime(result.StartLockTime).AddMinutes(Program.LockTime).AddSeconds(cd) < DateTime.UtcNow.AddHours(8)) return true;
+                else return false;
             }
             return false;
         }

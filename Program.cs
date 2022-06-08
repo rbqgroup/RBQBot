@@ -39,7 +39,7 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "1.0.5.3";
+        internal static string Version = "1.0.5.5";
 
         internal static readonly string HelpTxt =
             "/count - 查询口塞次数, 只能在群组内使用.\n" +
@@ -85,7 +85,7 @@ namespace RBQBot
             "「<code>@RBQExBot</code>」\n" +
             "然后选择「说猫话」来快速输入符合规则的消息\n" +
             "被戴口塞了的话最好在第二个人加固之前逃脱哦\n";
-        #endregion
+#endregion
 
         static void Main(string[] args)
         {
@@ -96,7 +96,7 @@ namespace RBQBot
 
             DB = new DBHelper();
 
-            #region 初始化默认口球列表
+#region 初始化默认口球列表
             if (DB.GetGagItemCount() == 0)
             {
                 DB.AddGagItem("胡萝卜口塞", 0, 1, true, true, null, null, null, null);
@@ -107,7 +107,7 @@ namespace RBQBot
                 DB.AddGagItem("炮机口塞", 100, 80, true, false, null, null, null, null);
                 DB.AddGagItem("超级口塞", 1000, 120, false, false, null, null, null, null);
             }
-            #endregion
+#endregion
 
             var proxy = new HttpToSocks5Proxy("127.0.0.1", 55555);
             var httpClient = new HttpClient(new HttpClientHandler { Proxy = proxy, UseProxy = true });
@@ -119,7 +119,7 @@ namespace RBQBot
                 // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
                 ReceiverOptions receiverOptions = new() { AllowedUpdates = { } };
 
-                #region 机器人启动后忽略WaitTime时间的消息
+#region 机器人启动后忽略WaitTime时间的消息
                 using (var x = new CancellationTokenSource())
                 {
                     Bot.StartReceiving(
@@ -130,28 +130,28 @@ namespace RBQBot
                     Thread.Sleep(WaitTime);
                     x.Cancel();
                 }
-                #endregion
+#endregion
 
                 Bot.StartReceiving(Handlers.HandleUpdateAsync,
                                    Handlers.HandleErrorAsync,
                                    receiverOptions,
                                    cts.Token);
 
-                #region 恢复内存队列
+#region 恢复内存队列
                 var rec = DB.GetAllRBQStatus();
                 foreach (var i in rec)
                 {
                     var tm = new DateTime(i.StartLockTime).AddMinutes(LockTime);
                     if (i.LockCount > 0)
                     {
-                        #region 在锁定时间内恢复添加
-                        if (DB.GetRBQCanLock(i.GroupId, i.RBQId))
+#region 在锁定时间内恢复添加
+                        if (DB.GetRBQCanLock(i.GroupId, i.RBQId) != true)
                         {
                             var timeout = (tm - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
                             var rbqx = new RBQList(i.Id, i.LockCount, i.GagId, timeout);
                             Program.List.TryAdd(i.Id, rbqx);
                         }
-                        #endregion
+#endregion
                         else // 口塞超时 恢复绒布球自由身
                         {
                             i.LockCount = 0;
@@ -162,7 +162,7 @@ namespace RBQBot
                         }
                     }
                 }
-                #endregion
+#endregion
 
                 Console.WriteLine("Running...");
                 while (true)
