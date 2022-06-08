@@ -30,6 +30,7 @@ namespace RBQBot
         /// <returns>合规性,大于0为不合规,等于0合规</returns>
         public static int TypeProcess(string msg)
         {
+            if (msg.IndexOfAny(new char[] { '呜', '哈', '啊', '唔', '嗯', '呃', '哦', '嗷', '呕', '噢', '喔' }) < 0) return 1;
             msg = msg.Replace('呜', ' ');
             msg = msg.Replace('哈', ' ');
             msg = msg.Replace('啊', ' ');
@@ -579,7 +580,7 @@ namespace RBQBot
                                 chatId: message.Chat.Id,
                                 disableNotification: true,
                                 parseMode: ParseMode.Html,
-                                text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已经给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 加固过口塞了,就放过Ta吧.");
+                                text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已经给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 添加/加固过口塞了,就放过Ta吧.");
                         }
                         #endregion
                         else
@@ -686,7 +687,7 @@ namespace RBQBot
                         var gag = Program.DB.GetGagItemInfo(comm[1]);
 
                         #region 是管理 绕过绒度限制
-                        if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id) == true)
+                        if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id) == true) // is true
                         {
                             Program.DB.AddRBQFroms(message.Chat.Id, message.From.Id, message.From.Id);
 
@@ -1560,7 +1561,8 @@ namespace RBQBot
                         }
                         #endregion
 
-                        if (message.ViaBot == null || message.ViaBot?.Id != botClient.BotId)
+                        if (message.ViaBot != null && message.ViaBot?.Id == botClient.BotId && message.Text == "/count") CountProcess(botClient, message);
+                        else
                         {
                             #region 输入不规范的绒布球处理
                             if (TypeProcess(message.Text) > 0) // 不合规
@@ -1645,7 +1647,7 @@ namespace RBQBot
                                 }
                             }
                             #endregion
-                        } else if (message.Text == "/count") CountProcess(botClient, message);
+                        }
                     }
                     #endregion
                     else // 无口塞无计时器
