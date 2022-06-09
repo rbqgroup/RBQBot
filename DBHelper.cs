@@ -18,6 +18,7 @@ namespace RBQBot
         private ILiteCollection<GagItem> gagItemCol = null;
         private ILiteCollection<RBQ> rbqCol = null;
         private ILiteCollection<RBQStatus> rbqStatusCol = null;
+        private ILiteCollection<MessageCount> messageCountCol = null;
 
         /// <summary>
         /// [绒布球] 给自己带上了默认口塞! 咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!
@@ -55,6 +56,7 @@ namespace RBQBot
             gagItemCol = db.GetCollection<GagItem>("GagList");
             rbqCol = db.GetCollection<RBQ>("RBQList");
             rbqStatusCol = db.GetCollection<RBQStatus>("RBQStatusList");
+            messageCountCol = db.GetCollection<MessageCount>("MessageCount");
         }
 
         #region Group Operate
@@ -446,6 +448,37 @@ namespace RBQBot
 
         public void SetRBQStatus(RBQStatus rbq) => rbqStatusCol.Update(rbq);
 
+        #endregion
+
+        #region MessageCount Operate
+        public void AddMessageCountUser(long groupId, long userId)
+        {
+            var obj = new MessageCount(messageCountCol.Count()+1, groupId, userId);
+            messageCountCol.Insert(obj);
+        }
+
+        public bool GetMessageCountUserExist(long groupId, long userId)
+        {
+            var result = messageCountCol.FindOne(x => x.GroupId == groupId && x.UserId == userId);
+            if (result.Id > 0) return true;
+            return false;
+        }
+
+        public void AddMessageCountUserCount(long groupId, long userId)
+        {
+            var result = messageCountCol.FindOne(x => x.GroupId == groupId && x.UserId == userId);
+            if (result.Id > 0)
+            {
+                result.Count++;
+                messageCountCol.Update(result);
+            }
+        }
+
+        public IEnumerable<MessageCount> GetAllMessageCounts() => messageCountCol.FindAll();
+
+        public int GetMessageCountTableCount() => messageCountCol.Count();
+
+        public void DropMessageCountTable() => db.DropCollection("MessageCount");
         #endregion
     }
 }

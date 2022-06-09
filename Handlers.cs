@@ -1135,6 +1135,8 @@ namespace RBQBot
                                 case ChatType.Group:
                                 case ChatType.Supergroup:
                                     MsgProcess(botClient, message);
+                                    if (Program.DB.GetMessageCountUserExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddMessageCountUser(message.Chat.Id, message.From.Id);
+                                    Program.DB.AddMessageCountUserCount(message.Chat.Id, message.From.Id);
                                     break;
                                 default:
                                     break;
@@ -1186,6 +1188,8 @@ namespace RBQBot
 
                         case MessageType.Sticker:
                             StickerProcess(botClient, message);
+                            if (Program.DB.GetMessageCountUserExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddMessageCountUser(message.Chat.Id, message.From.Id);
+                            Program.DB.AddMessageCountUserCount(message.Chat.Id, message.From.Id);
                             break;
                         default:
                             Console.WriteLine($"收到未处理的消息 消息类型: {message.Chat.Type}");
@@ -1414,6 +1418,13 @@ namespace RBQBot
         {
             switch (message.Text.ToLower())
             {
+                case "/start":
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "欢迎! 请务必阅读 /help /about /privacy 点击蓝色字即可");
+                    break;
                 case "/count":
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
@@ -1459,6 +1470,13 @@ namespace RBQBot
                     break;
                 case "/about":
                     About(botClient, message);
+                    break;
+                case "/privacy":
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: Program.PrivacyTxt);
                     break;
                 case "/debug":
                     Debug(botClient, message);
@@ -1717,6 +1735,13 @@ namespace RBQBot
                     break;
                 case "/about":
                     About(botClient, message);
+                    break;
+                case "/privacy":
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: Program.PrivacyTxt);
                     break;
                 default:
                     botClient.SendTextMessageAsync(

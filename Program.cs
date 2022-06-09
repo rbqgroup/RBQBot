@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 
 using Telegram.Bot;
@@ -16,6 +17,7 @@ namespace RBQBot
         internal static DateTime StartTime;
         internal static volatile bool IsDebug = false;
 
+        internal static System.Timers.Timer msgCountTm;
         internal static DBHelper DB;
         internal static TelegramBotClient Bot;
 
@@ -39,7 +41,7 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "1.0.5.6";
+        internal static string Version = "1.0.6.0";
 
         internal static readonly string HelpTxt =
             "/count - 查询口塞次数, 只能在群组内使用.\n" +
@@ -51,7 +53,8 @@ namespace RBQBot
             "/rbqpoint - 查询自己的「绒度」. 对用户发送的消息回复会查询被回复的人的「绒度」.\n" +
             "/list - 显示口塞列表.\n" +
             "/ping - 检查Bot是否在线(这是一个管理员命令, 只能由群组的管理员使用).\n" +
-            "/about - 查看有关本 Bot 本身的相关信息 (如玩法、介绍、隐私权、许可、反馈等).\n";
+            "/about - 查看有关本 Bot 本身的相关信息 (如玩法、介绍、隐私权、许可、反馈等).\n" +
+            "/privacy - 关于隐私的信息";
 
         internal static readonly string AboutTxt =
             "================Bot功能================\n" +
@@ -85,7 +88,19 @@ namespace RBQBot
             "「<code>@RBQExBot</code>」\n" +
             "然后选择「说猫话」来快速输入符合规则的消息\n" +
             "被戴口塞了的话最好在第二个人加固之前逃脱哦\n";
-#endregion
+
+        internal static readonly string PrivacyTxt =
+            "本 bot 不会主动收集聊天内容, 但会存在聊天计数器收集用户id和发送消息次数(非内存易失), 并且每天会重置.\n" +
+            "本 bot 只有在出错时和错误操作时会输出可能存在的相关信息, 例如谁调用了这条命令, 详细的堆栈(可能包含大量信息), 以用作错误调试, 但会在使用后删除.\n" +
+            "本 bot 不会与任何第三方API交互获取通信.\n" +
+            "本 bot 具有管理员权限, 仅为实现玩法和功能, 不会进行滥权(排除群组内的管理员滥用), 如有非/help命令中的异常管理员操作, 请与作者反馈.\n" +
+            "由 MintNeko 维护的实例将不会使用任何位于国内机房或公司位于中国内地的云服务运营商. 自建实例的话也强烈建议如此, 虽然有使用 Socks5 代理功能, 但并不推荐使用. \n" +
+            "本着隐私和透明度, 本程序完全开源, 但还请准守以下规定: \n" +
+            "许可: 在使用本程序或源代码时请遵守 MIT License 并且禁止违反当地法律之用途.\n" +
+            "源代码: https://github.com/RBQGroup/RBQBot \n" +
+            "不保证服务质量: 本 bot 可能会随时进入维护甚至生产环境在线开发并不另行通知, 如果突然停止响应请稍后再试, 因为请求可能会产生堆积而在恢复服务后同时执行而发生预期外的行为.\n" +
+            "滥用警告: 对本 bot 的滥用行为可能会被管理员加入黑名单而被禁止使用本 bot 中的任何命令. 本 bot 具有积分功能, 但严禁为了刷分而在群组中刷屏, 这与增加群聊乐趣的初衷本末倒置.\n";
+        #endregion
 
         static void Main(string[] args)
         {
@@ -96,7 +111,7 @@ namespace RBQBot
 
             DB = new DBHelper();
 
-#region 初始化默认口球列表
+            #region 初始化默认口球列表
             if (DB.GetGagItemCount() == 0)
             {
                 DB.AddGagItem("胡萝卜口塞", 0, 1, true, true, null, null, null, null);
@@ -107,7 +122,7 @@ namespace RBQBot
                 DB.AddGagItem("炮机口塞", 100, 80, true, false, null, null, null, null);
                 DB.AddGagItem("超级口塞", 1000, 120, false, false, null, null, null, null);
             }
-#endregion
+            #endregion
 
             var proxy = new HttpToSocks5Proxy("127.0.0.1", 55555);
             var httpClient = new HttpClient(new HttpClientHandler { Proxy = proxy, UseProxy = true });
@@ -119,7 +134,7 @@ namespace RBQBot
                 // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
                 ReceiverOptions receiverOptions = new() { AllowedUpdates = { } };
 
-#region 机器人启动后忽略WaitTime时间的消息
+                #region 机器人启动后忽略WaitTime时间的消息
                 using (var x = new CancellationTokenSource())
                 {
                     Bot.StartReceiving(
@@ -130,28 +145,28 @@ namespace RBQBot
                     Thread.Sleep(WaitTime);
                     x.Cancel();
                 }
-#endregion
+                #endregion
 
                 Bot.StartReceiving(Handlers.HandleUpdateAsync,
                                    Handlers.HandleErrorAsync,
                                    receiverOptions,
                                    cts.Token);
 
-#region 恢复内存队列
+                #region 恢复内存队列
                 var rec = DB.GetAllRBQStatus();
                 foreach (var i in rec)
                 {
                     var tm = new DateTime(i.StartLockTime).AddMinutes(LockTime);
                     if (i.LockCount > 0)
                     {
-#region 在锁定时间内恢复添加
+                        #region 在锁定时间内恢复添加
                         if (DB.GetRBQCanLock(i.GroupId, i.RBQId) != true)
                         {
                             var timeout = (tm - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
                             var rbqx = new RBQList(i.Id, i.LockCount, i.GagId, timeout);
                             Program.List.TryAdd(i.Id, rbqx);
                         }
-#endregion
+                        #endregion
                         else // 口塞超时 恢复绒布球自由身
                         {
                             i.LockCount = 0;
@@ -162,7 +177,15 @@ namespace RBQBot
                         }
                     }
                 }
-#endregion
+                #endregion
+
+                #region 创建零点输出群活跃信息
+                msgCountTm = new System.Timers.Timer();
+                msgCountTm.AutoReset = false;
+                msgCountTm.Elapsed += MsgCountTm_Elapsed;
+                msgCountTm.Interval = (DateTime.Today.AddDays(1) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+                msgCountTm.Start();
+                #endregion
 
                 Console.WriteLine("Running...");
                 while (true)
@@ -176,6 +199,85 @@ namespace RBQBot
                 cts.Cancel();
 #pragma warning restore CS0162 // 检测到无法访问的代码
             }
+        }
+
+        public static void MsgCountTm_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            var lists = Program.DB.GetAllMessageCounts();
+            var count = Program.DB.GetMessageCountTableCount();
+
+            var list = new Model.MsgCount[count];
+            var group = new long[count];
+            int index = 0;
+
+            foreach (var i in lists)
+            {
+                bool haveGroup = false;
+                int downC = -1;
+                for (int i2 = 0; i2 < group.Length; i2++)
+                {
+                    if (group[i2] == i.GroupId) { haveGroup = true; break; }
+                    if (group[i2] == 0 && downC == -1) downC = i2;
+                }
+                if (haveGroup == false) { group[downC] = i.GroupId; downC = -1; }
+                list[index].GroupId = i.GroupId;
+                list[index].UserId = i.UserId;
+                list[index].Count = i.Count;
+                index++;
+            }
+
+            if (list.Length > 0)
+            {
+                Program.DB.DropMessageCountTable();
+
+                for (int i = 0; i < group.Length; i++)
+                {
+                    var kvp = new Model.MsgCountX[5];
+                    for (int i2 = 0; i2 < list.Length; i2++)
+                    {
+                        if (list[i2].GroupId == group[i])
+                        {
+                            for (int i3 = 0; i3 < kvp.Length; i3++)
+                            {
+                                if (list[i2].Count >= kvp[i3].Count)
+                                {
+                                    if (i3+1 > kvp.Length)
+                                    {
+                                        kvp[i3].UserId = list[i2].UserId;
+                                        kvp[i3].Count = list[i2].Count;
+                                        break;
+                                    }
+                                    kvp[i3+1] = kvp[i3];
+                                    kvp[i3].UserId = list[i2].UserId;
+                                    kvp[i3].Count = list[i2].Count;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    var sb = new StringBuilder();
+                    sb.AppendLine("快乐的一天开始了!");
+                    sb.AppendLine();
+                    sb.AppendLine("昨天群里最活跃的人是: ");
+
+                    for (int si = 0; si < kvp.Length; si++)
+                    {
+                        if (kvp[si].UserId == 0) break;
+                        var result = Bot.GetChatMemberAsync(group[i], kvp[si].UserId).Result;
+                        sb.AppendLine($"TOP {si+1} :  <a href=\"tg://user?id={kvp[si].UserId}\">{result.User.FirstName} {result.User?.LastName}</a>  ({kvp[si].Count})");
+                    }
+
+                    Bot.SendTextMessageAsync(
+                        chatId: group[i],
+                        disableNotification: true,
+                        parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                        text: sb.ToString());
+                }
+            }
+
+            msgCountTm.Interval = (DateTime.Today.AddDays(1) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+            msgCountTm.Start();
         }
     }
 }
