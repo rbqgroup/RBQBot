@@ -42,8 +42,9 @@ namespace RBQBot
 
         private void InitDB()
         {
+            System.IO.Directory.CreateDirectory($"{AppDomain.CurrentDomain.BaseDirectory}/db/");
             db = new LiteDatabase(new ConnectionString() {
-                Filename = $"{AppDomain.CurrentDomain.BaseDirectory}database.db",
+                Filename = $"{AppDomain.CurrentDomain.BaseDirectory}/db/database.db",
                 Connection = ConnectionType.Direct,
                 Password = null,
                 InitialSize = 0,
@@ -64,7 +65,13 @@ namespace RBQBot
 
         public void AddAllowGroup(long groupId)
         {
-            var obj = new AllowGroup(groupId);
+            var obj = new AllowGroup(groupId)
+            {
+                AllowGag = true,
+                AllowMsgCount = true,
+                AllowVerify = true,
+                SamplyMsgCountStr = "快乐的一天开始了!"
+            };
             allowGroupCol.Insert(obj);
         }
 
@@ -74,12 +81,47 @@ namespace RBQBot
             if (result != null) allowGroupCol.Delete(result.Id);
         }
 
+        public AllowGroup GetAllowGroup(long groupId)
+        {
+            var result = allowGroupCol.FindOne(x => x.GroupId == groupId);
+            if (result != null) return result;
+            return null;
+        }
+
+        public string GetAllowMsgCountStr(long groupId)
+        {
+            var result = allowGroupCol.FindOne(x => x.GroupId == groupId);
+            if (result != null)
+            {
+                return result.SamplyMsgCountStr;
+            }
+            return "快乐的一天开始了!";
+        }
+
+        public bool GetAllowFunctionStatus(long groupId, AllowFunction query)
+        {
+            var result = allowGroupCol.FindOne(x => x.GroupId == groupId);
+            if (result != null)
+            {
+                switch (query)
+                {
+                    case AllowFunction.AllowGag: return result.AllowGag;
+                    case AllowFunction.AllowVerify: return result.AllowVerify;
+                    case AllowFunction.AllowMsgCount: return result.AllowMsgCount;
+                    default: return false;
+                }
+            }
+            return false;
+        }
+
         public bool GetAllowGroupExist(long groupId)
         {
             var result = allowGroupCol.FindOne(x => x.GroupId == groupId);
             if (result != null) return true;
             return false;
         }
+
+        public void SetAllowGroup(AllowGroup allowGroup) => allowGroupCol.Update(allowGroup);
 
         //public long[] GetAllGroupId()
         //{
@@ -137,7 +179,7 @@ namespace RBQBot
             if (result != null) gagItemCol.Delete(result.Id);
         }
 
-        public System.Collections.Generic.IEnumerable<GagItem> GetAllGagItems() => gagItemCol.FindAll();
+        public IEnumerable<GagItem> GetAllGagItems() => gagItemCol.FindAll();
 
         public bool GetGagItemExist(string gagName)
         {
@@ -149,15 +191,13 @@ namespace RBQBot
         public GagItem GetGagItemInfo(string gagName)
         {
             var result = gagItemCol.FindOne(x => x.Name == gagName);
-            if (result != null) return result;
-            return null;
+            return result;
         }
 
         public GagItem GetGagItemInfo(int id)
         {
             var result = gagItemCol.FindOne(x => x.Id == id);
-            if (result != null) return result;
-            return null;
+            return result;
         }
 
         public void SetGagItem(string gagName, long limitPoint, long unLockCount, string[] selfLockMsg = null, string[] lockMsg = null, string[] enhancedLockMsg = null, string[] unlockMsg = null)
@@ -181,13 +221,12 @@ namespace RBQBot
         #region RBQ Operate
         public int GetRBQCount() => rbqCol.Count();
 
-        public void AddRBQ(long telegramId, long rbqPoint, bool fastInline)
+        public void AddRBQ(long telegramId, long rbqPoint)
         {
             var obj = new RBQ()
             {
                 TelegramId = telegramId,
-                RBQPoint = rbqPoint,
-                FastInline = fastInline
+                RBQPoint = rbqPoint
             };
             rbqCol.Insert(obj);
         }
@@ -208,8 +247,7 @@ namespace RBQBot
         public RBQ GetRBQInfo(long telegramId)
         {
             var result = rbqCol.FindOne(x => x.TelegramId == telegramId);
-            if (result != null) return result;
-            return null;
+            return result;
         }
 
         public long GetRBQPoint(long telegramId)
@@ -219,13 +257,12 @@ namespace RBQBot
             return -1;
         }
 
-        public void SetRBQInfo(long telegramId, long rbqPoint, bool fastInline)
+        public void SetRBQInfo(long telegramId, long rbqPoint)
         {
             var result = rbqCol.FindOne(x => x.TelegramId == telegramId);
             if (result != null)
             {
                 result.RBQPoint = rbqPoint;
-                result.FastInline = fastInline;
                 rbqCol.Update(result);
             }
         }
@@ -398,7 +435,7 @@ namespace RBQBot
         {
             var result = rbqStatusCol.FindOne(x => x.GroupId == groupId && x.RBQId == rbqId);
             if (result != null) return result.FromId;
-            return null;
+            return new long[0];
         }
 
         public RBQStatus GetRBQStatus(int id)
@@ -457,6 +494,12 @@ namespace RBQBot
             messageCountCol.Insert(obj);
         }
 
+        public void AddMessageCountUser(long groupId, long userId, int count)
+        {
+            var obj = new MessageCount(messageCountCol.Count()+1, groupId, userId, count);
+            messageCountCol.Insert(obj);
+        }
+
         public bool GetMessageCountUserExist(long groupId, long userId)
         {
             var result = messageCountCol.FindOne(x => x.GroupId == groupId && x.UserId == userId);
@@ -479,6 +522,7 @@ namespace RBQBot
         public int GetMessageCountTableCount() => messageCountCol.Count();
 
         public void DropMessageCountTable() => db.DropCollection("MessageCount");
+
         #endregion
     }
 }

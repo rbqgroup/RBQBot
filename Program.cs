@@ -41,7 +41,7 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "1.0.6.0";
+        internal static string Version = "1.1.8.0";
 
         internal static readonly string HelpTxt =
             "/count - 查询口塞次数, 只能在群组内使用.\n" +
@@ -134,6 +134,7 @@ namespace RBQBot
                 // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
                 ReceiverOptions receiverOptions = new() { AllowedUpdates = { } };
 
+                Console.WriteLine($"Running, Please Wait {WaitTime}MS To Process Message");
                 #region 机器人启动后忽略WaitTime时间的消息
                 using (var x = new CancellationTokenSource())
                 {
@@ -179,7 +180,7 @@ namespace RBQBot
                 }
                 #endregion
 
-                #region 创建零点输出群活跃信息
+                #region 创建凌晨输出群活跃信息
                 msgCountTm = new System.Timers.Timer();
                 msgCountTm.AutoReset = false;
                 msgCountTm.Elapsed += MsgCountTm_Elapsed;
@@ -203,8 +204,8 @@ namespace RBQBot
 
         public static void MsgCountTm_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            var lists = Program.DB.GetAllMessageCounts();
-            var count = Program.DB.GetMessageCountTableCount();
+            var lists = DB.GetAllMessageCounts();
+            var count = DB.GetMessageCountTableCount();
 
             var list = new Model.MsgCount[count];
             var group = new long[count];
@@ -228,11 +229,13 @@ namespace RBQBot
 
             if (list.Length > 0)
             {
-                Program.DB.DropMessageCountTable();
+                DB.DropMessageCountTable();
 
                 for (int i = 0; i < group.Length; i++)
                 {
+                    if (group[i] == 0) break;
                     var kvp = new Model.MsgCountX[5];
+                    var temp = new Model.MsgCountX[5];
                     for (int i2 = 0; i2 < list.Length; i2++)
                     {
                         if (list[i2].GroupId == group[i])
@@ -247,9 +250,19 @@ namespace RBQBot
                                         kvp[i3].Count = list[i2].Count;
                                         break;
                                     }
-                                    kvp[i3+1] = kvp[i3];
+                                    if (kvp[i3].Count == 0)
+                                    {
+                                        kvp[i3].UserId = list[i2].UserId;
+                                        kvp[i3].Count = list[i2].Count;
+                                        break;
+                                    }
+
+                                    Array.Copy(kvp, i3, temp, 0, kvp.Length - i3);
                                     kvp[i3].UserId = list[i2].UserId;
                                     kvp[i3].Count = list[i2].Count;
+                                    if (i3==0) Array.Copy(temp, 0, kvp, i3 + 1, kvp.Length - i3 - 1);
+                                    else Array.Copy(temp, i3, kvp, i3, kvp.Length - i3);
+
                                     break;
                                 }
                             }
@@ -257,7 +270,7 @@ namespace RBQBot
                     }
 
                     var sb = new StringBuilder();
-                    sb.AppendLine("快乐的一天开始了!");
+                    sb.AppendLine(DB.GetAllowMsgCountStr(group[i]));
                     sb.AppendLine();
                     sb.AppendLine("昨天群里最活跃的人是: ");
 
