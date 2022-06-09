@@ -10,8 +10,5 @@
 
         /// <summary>全局绒度</summary>
         public long RBQPoint { get; set; }
-
-        /// <summary>允许使用Inline快速输入</summary>
-        public bool FastInline { get; set; }
     }
 }

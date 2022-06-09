@@ -19,6 +19,16 @@ namespace RBQBot
     public class Handlers
     {
         #region 通用功能
+        public static void MessageCountProcess(Message message)
+        {
+            if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowMsgCount) == true)
+            {
+                if (Program.DB.GetMessageCountUserExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddMessageCountUser(message.Chat.Id, message.From.Id);
+                Program.DB.AddMessageCountUserCount(message.Chat.Id, message.From.Id);
+            }
+        }
+
+
         public static void DelayDeleteMessage(ITelegramBotClient botClient, long chatId, int msgId, int delay)
         {
             Thread.Sleep(delay);
@@ -129,7 +139,7 @@ namespace RBQBot
 
         public static string GetRBQPoint(long telegramId)
         {
-            if (Program.DB.GetRBQExist(telegramId) != true) Program.DB.AddRBQ(telegramId, 0, false);
+            if (Program.DB.GetRBQExist(telegramId) != true) Program.DB.AddRBQ(telegramId, 0);
 
             var rbq = Program.DB.GetRBQInfo(telegramId);
             return $"我的绒度有 {rbq.RBQPoint} 点, 感觉自己绒绒哒.";
@@ -287,7 +297,7 @@ namespace RBQBot
 
         private static void GetRBQPoint(ITelegramBotClient botClient, Message message)
         {
-            if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0, false);
+            if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0);
             if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false);
 
             var point = Program.DB.GetRBQPoint(message.From.Id);
@@ -318,7 +328,7 @@ namespace RBQBot
 
         private static void GagProcess(ITelegramBotClient botClient, Message message, string[] comm)
         {
-            if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0, false);
+            if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0);
             if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false);
 
             #region 对别人回复命令
@@ -334,7 +344,7 @@ namespace RBQBot
                 }
                 else
                 {
-                    if (Program.DB.GetRBQExist(message.ReplyToMessage.From.Id) != true) Program.DB.AddRBQ(message.ReplyToMessage.From.Id, 0, false);
+                    if (Program.DB.GetRBQExist(message.ReplyToMessage.From.Id) != true) Program.DB.AddRBQ(message.ReplyToMessage.From.Id, 0);
                     if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.ReplyToMessage.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id, 0, false);
 
                     #region 如果命令长度 > 1 是有开关/给别人加口塞
@@ -645,7 +655,7 @@ namespace RBQBot
             #region 自我开关与口塞
             else
             {
-                if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0, false);
+                if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0);
                 if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false);
 
                 if (comm.Length > 1)
@@ -799,7 +809,7 @@ namespace RBQBot
 
         private static void RBQPointProcess(ITelegramBotClient botClient, Message message)
         {
-            if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0, false);
+            if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0);
             if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false);
 
             if (message.ReplyToMessage != null)
@@ -814,7 +824,7 @@ namespace RBQBot
                 }
                 else
                 {
-                    if (Program.DB.GetRBQExist(message.ReplyToMessage.From.Id) != true) Program.DB.AddRBQ(message.ReplyToMessage.From.Id, 0, false);
+                    if (Program.DB.GetRBQExist(message.ReplyToMessage.From.Id) != true) Program.DB.AddRBQ(message.ReplyToMessage.From.Id, 0);
                     if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.ReplyToMessage.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id, 0, false);
 
                     var point = Program.DB.GetRBQPoint(message.ReplyToMessage.From.Id);
@@ -1046,7 +1056,7 @@ namespace RBQBot
                     }
                     break;
                 case "adminverify":
-                    if (CheckIsAdmin(botClient, Convert.ToInt64(data[1]), Convert.ToInt64(data[2])) != true) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
+                    if (CheckIsAdmin(botClient, Convert.ToInt64(data[1]), callbackQuery.From.Id) != true) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
                     else if (data.Length > 1)
                     {
                         if (Program.BanList.TryRemove(Convert.ToInt64(data[2]), out WaitBan wait3) == true)
@@ -1080,7 +1090,7 @@ namespace RBQBot
                     else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误! inline请求的目标 id 不存在!", false, null, 30);
                     break;
                 case "adminkick":
-                    if (CheckIsAdmin(botClient, Convert.ToInt64(data[1]), Convert.ToInt64(data[2])) != true) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
+                    if (CheckIsAdmin(botClient, Convert.ToInt64(data[1]), callbackQuery.From.Id) != true) botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "您不是管理员!", false, null, 30);
                     else if (data.Length > 1)
                     {
                         if (Program.BanList.TryRemove(Convert.ToInt64(data[2]), out WaitBan wait4) == true)
@@ -1117,7 +1127,7 @@ namespace RBQBot
         private static async Task BotOnMessageReceived(ITelegramBotClient botClient, Message message)
         {
 #if DEBUG
-            //Console.WriteLine($"RecvMSG! MsgType: {message.Type} | MsgId: {message.MessageId}\r\nChatType: {message.Chat.Type} | ChatId: {message.Chat.Id} | ChatTitle: {message.Chat.Title}");
+            Console.WriteLine($"RecvMSG! MsgType: {message.Type} | MsgId: {message.MessageId}\r\nChatType: {message.Chat.Type} | ChatId: {message.Chat.Id} | ChatTitle: {message.Chat.Title}");
 #endif
             if (Program.IsDebug == true && message.From.Id == Program.DebugUserId) DebugProcess(botClient, message);
             else
@@ -1134,17 +1144,18 @@ namespace RBQBot
                                     break;
                                 case ChatType.Group:
                                 case ChatType.Supergroup:
-                                    MsgProcess(botClient, message);
+                                    MessageProcess(botClient, message);
+                                    MessageCountProcess(message);
                                     break;
                                 default:
                                     break;
                             }
                             break;
                         case MessageType.ChatMembersAdded: // Bot & User 加入了群组
-                            if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true) ChatMembersAdded(botClient, message);
+                            if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true) ChatMembersAdded(botClient, message);
                             break;
                         case MessageType.ChatMemberLeft: // Bot & User 离开了群组
-                            if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true) ChatMemberLeft(botClient, message);
+                            if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true) ChatMemberLeft(botClient, message);
                             break;
 
                         #region 不使用/拦截的消息类型
@@ -1186,9 +1197,10 @@ namespace RBQBot
 
                         case MessageType.Sticker:
                             StickerProcess(botClient, message);
+                            MessageCountProcess(message);
                             break;
                         default:
-                            Console.WriteLine($"收到未处理的消息 消息类型: {message.Chat.Type}");
+                            Console.WriteLine($"收到未处理的消息 消息类型: {message.Chat.Type} 消息内容: {message?.Text} 消息来源: {message.From?.Id} @{message.From?.Username} {message.From?.FirstName} {message.From?.LastName}");
                             break;
                     }
                     #region Old Command Switch
@@ -1320,7 +1332,7 @@ namespace RBQBot
                 if (message.NewChatMembers[i].IsBot != true)
                 {
                     var exist = Program.DB.GetRBQExist(message.NewChatMembers[i].Id);
-                    if (exist != true) Program.DB.AddRBQ(message.NewChatMembers[i].Id, 0, false);
+                    if (exist != true) Program.DB.AddRBQ(message.NewChatMembers[i].Id, 0);
 
                     exist = Program.DB.GetRBQStatusExist(message.Chat.Id, message.NewChatMembers[i].Id);
                     if (exist != true) Program.DB.AddRBQStatus(message.Chat.Id, message.NewChatMembers[i].Id, 0, false);
@@ -1414,6 +1426,13 @@ namespace RBQBot
         {
             switch (message.Text.ToLower())
             {
+                case "/start":
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "欢迎! 请务必阅读 /help /about /privacy 点击蓝色字即可");
+                    break;
                 case "/count":
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
@@ -1445,6 +1464,7 @@ namespace RBQBot
                             chatId: message.Chat.Id,
                             replyToMessageId: message.MessageId,
                             disableNotification: true,
+                            parseMode: ParseMode.Html,
                             text: "您不是管理员,不能使用此命令");
                     break;
                 case "/verify":
@@ -1460,6 +1480,13 @@ namespace RBQBot
                 case "/about":
                     About(botClient, message);
                     break;
+                case "/privacy":
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: Program.PrivacyTxt);
+                    break;
                 case "/debug":
                     Debug(botClient, message);
                     break;
@@ -1474,35 +1501,54 @@ namespace RBQBot
         }
 
         /// <summary>群内消息处理</summary>
-        private static void MsgProcess(ITelegramBotClient botClient, Message message)
+        private static void MessageProcess(ITelegramBotClient botClient, Message message)
         {
-            if (Program.DB.GetAllowGroupExist(message.Chat.Id) == false) Program.DB.AddAllowGroup(message.Chat.Id);
+#if Debug
+            if (Program.DB.GetAllowGroupExist(message.Chat.Id) != true) Program.DB.AddAllowGroup(message.Chat.Id);
+#endif
 
             if (Program.DB.GetAllowGroupExist(message.Chat.Id)) // 消息进入
             {
                 #region 进群验证
-                if (Program.BanList.TryRemove(message.From.Id, out WaitBan ban) == true)
+                if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true)
                 {
-                    if (message.Text != "/verify 我很可爱")
+                    if (Program.BanList.TryRemove(message.From.Id, out WaitBan ban) == true)
                     {
-                        ban.FailCount++;
-                        if (ban.FailCount <3)
+                        if (message.Text != "/verify 我很可爱")
                         {
-                            botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                            var result = botClient.SendTextMessageAsync(
-                                chatId: message.Chat.Id,
-                                disableNotification: false,
-                                parseMode: ParseMode.Html,
-                                text: $"验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 还有 {3-ban.FailCount} 次验证机会.").Result;
+                            ban.FailCount++;
+                            if (ban.FailCount <3)
+                            {
+                                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                                var result = botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    disableNotification: false,
+                                    parseMode: ParseMode.Html,
+                                    text: $"验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 还有 {3-ban.FailCount} 次验证机会.").Result;
 
-                            Program.BanList.TryAdd(ban.UserId, ban);
+                                Program.BanList.TryAdd(ban.UserId, ban);
+                            }
+                            else
+                            {
+                                ban.Stop();
+
+                                botClient.BanChatMemberAsync(ban.ChatId, ban.UserId);
+                                botClient.UnbanChatMemberAsync(ban.ChatId, ban.UserId);
+
+                                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                                botClient.DeleteMessageAsync(ban.ChatId, ban.CallbackMsgId);
+                                botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    disableNotification: true,
+                                    parseMode: ParseMode.Html,
+                                    text: $"由于多次验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已被移出本群.");
+                            }
                         }
                         else
                         {
                             ban.Stop();
 
-                            botClient.BanChatMemberAsync(ban.ChatId, ban.UserId);
-                            botClient.UnbanChatMemberAsync(ban.ChatId, ban.UserId);
+                            var result = botClient.GetChatMemberAsync(ban.ChatId, ban.UserId).Result;
 
                             botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                             botClient.DeleteMessageAsync(ban.ChatId, ban.CallbackMsgId);
@@ -1510,160 +1556,141 @@ namespace RBQBot
                                 chatId: message.Chat.Id,
                                 disableNotification: true,
                                 parseMode: ParseMode.Html,
-                                text: $"由于多次验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已被移出本群.");
+                                text: $"恭喜 <a href=\"tg://user?id={ban.ChatId}\">{result.User?.FirstName} {result.User?.LastName}</a> 验证通过!");
                         }
-                    }
-                    else
-                    {
-                        ban.Stop();
-
-                        var result = botClient.GetChatMemberAsync(ban.ChatId, ban.UserId).Result;
-
-                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                        botClient.DeleteMessageAsync(ban.ChatId, ban.CallbackMsgId);
-                        botClient.SendTextMessageAsync(
-                            chatId: message.Chat.Id,
-                            disableNotification: true,
-                            parseMode: ParseMode.Html,
-                            text: $"恭喜 <a href=\"tg://user?id={ban.ChatId}\">{result.User?.FirstName} {result.User?.LastName}</a> 验证通过!");
                     }
                 }
                 #endregion
 
-                if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0, false); // 检查是否注册RBQ的全局信息
-                if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false); // 检查是否注册RBQ的群组状态信息
-
-
-                //Program.DB.SetRBQStatus(message.Chat.Id, message.From.Id, 1, false, 1, DateTime.UtcNow.AddHours(8).Ticks, new long[] { message.From.Id }); // 迫害所有人 （调试用）
-                var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.From.Id); // 获取RBQ状态
-                if (rbq != null)
+                if (message.Text[0] == '/') CommandProcess(botClient, message);
+                else if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowGag) == true)
                 {
-                    var time = new DateTime(rbq.StartLockTime).AddMinutes(Program.LockTime);
-                    #region 绒布球被塞口塞后处理
-                    if (rbq.LockCount > 0 && DateTime.UtcNow.AddHours(8) < time) // 有锁定次数并在时间内
+                    if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0); // 检查是否注册RBQ的全局信息
+                    if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false); // 检查是否注册RBQ的群组状态信息
+
+
+                    //Program.DB.SetRBQStatus(message.Chat.Id, message.From.Id, 1, false, 1, DateTime.UtcNow.AddHours(8).Ticks, new long[] { message.From.Id }); // 迫害所有人 （调试用）
+                    var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.From.Id); // 获取RBQ状态
+                    if (rbq != null)
                     {
-                        #region 内存队列存在检查
-                        if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
+                        var time = new DateTime(rbq.StartLockTime).AddMinutes(Program.LockTime);
+                        #region 绒布球被塞口塞后处理
+                        if (rbq.LockCount > 0 && DateTime.UtcNow.AddHours(8) < time) // 有锁定次数并在时间内
                         {
-                            var timeout = (time - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
-                            var rbqx = new RBQList(rbq.Id, rbq.LockCount, rbq.GagId, timeout);
-                            Program.List.TryAdd(rbq.Id, rbqx);
-                        }
-                        else
-                        {
-                            rbqItem.Stop();
-                            rbqItem.Id = rbq.Id;
-                            rbqItem.GagId = rbq.GagId;
-                            rbqItem.StartLockTime = rbq.StartLockTime;
-                            rbqItem.LockCount = rbq.LockCount;
-                            rbqItem.ResetTimer();
-                            Program.List.TryAdd(rbq.Id, rbqItem);
-                        }
-                        #endregion
-
-                        if (message.ViaBot != null && message.ViaBot?.Id == botClient.BotId && message.Text == "/count") CountProcess(botClient, message);
-                        else
-                        {
-                            #region 输入不规范的绒布球处理
-                            if (TypeProcess(message.Text) > 0) // 不合规
-                            { // 如果不符合要求删除消息并嘲讽
-                                var R = new Random();
-                                if (R.Next(0, 100) >= 70)
-                                {
-                                    rbq.LockCount++;
-                                    rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
-                                    Program.DB.SetRBQStatus(rbq);
-                                    if (Program.List.TryRemove(rbq.Id, out RBQList rbqI))
-                                    {
-                                        rbqItem.Stop();
-                                        rbqI.LockCount++;
-                                        rbqI.StartLockTime = rbq.StartLockTime;
-                                        rbqI.ResetTimer();
-
-                                        Program.List.TryAdd(rbq.Id, rbqI);
-                                    }
-
-                                    Program.DB.SetRBQPointAdd1(rbq.RBQId);
-
-                                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                                    botClient.SendTextMessageAsync(
-                                        chatId: message.Chat.Id,
-                                        disableNotification: true,
-                                        parseMode: ParseMode.Html,
-                                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣扎的次数");
-                                }
-                                else
-                                {
-                                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                                    botClient.SendTextMessageAsync(
-                                        chatId: message.Chat.Id,
-                                        disableNotification: true,
-                                        parseMode: ParseMode.Html,
-                                        text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!");
-                                }
+                            #region 内存队列存在检查
+                            if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
+                            {
+                                var timeout = (time - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+                                var rbqx = new RBQList(rbq.Id, rbq.LockCount, rbq.GagId, timeout);
+                                Program.List.TryAdd(rbq.Id, rbqx);
+                            }
+                            else
+                            {
+                                rbqItem.Stop();
+                                rbqItem.Id = rbq.Id;
+                                rbqItem.GagId = rbq.GagId;
+                                rbqItem.StartLockTime = rbq.StartLockTime;
+                                rbqItem.LockCount = rbq.LockCount;
+                                rbqItem.ResetTimer();
+                                Program.List.TryAdd(rbq.Id, rbqItem);
                             }
                             #endregion
 
-                            #region 输入规范的绒布球处理
-                            else // 合规 并进行挣扎计数-1 并重置时间
+                            if (message.ViaBot != null && message.ViaBot?.Id == botClient.BotId && message.Text == "/count") CountProcess(botClient, message);
+                            else
                             {
-                                if (rbq.LockCount-1 == 0)
-                                {
-                                    var gag = Program.DB.GetGagItemInfo(rbq.GagId);
+                                #region 输入不规范的绒布球处理
+                                if (TypeProcess(message.Text) > 0) // 不合规
+                                { // 如果不符合要求删除消息并嘲讽
                                     var R = new Random();
-
-                                    rbq.LockCount = 0;
-                                    rbq.FromId = new long[0];
-                                    rbq.GagId = 0;
-                                    rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
-                                    Program.DB.SetRBQStatus(rbq);
-                                    Program.DB.SetRBQPointAdd1(rbq.RBQId);
-
-                                    botClient.SendTextMessageAsync(
-                                        chatId: message.Chat.Id,
-                                        disableNotification: true,
-                                        parseMode: ParseMode.Html,
-                                        text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 成功挣脱了被人们安装的 <code>{gag.Name}</code>!\n{gag.UnLockMsg[R.Next(0, gag.UnLockMsg.Length)]}");
-
-                                    Program.List.TryRemove(rbq.Id, out RBQList rbqx);
-                                    rbqx.Stop();
-                                }
-                                else if (rbq.LockCount-1 > 0)
-                                {
-                                    rbq.LockCount--;
-                                    rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
-                                    Program.DB.SetRBQStatus(rbq);
-
-                                    if (Program.List.TryRemove(rbq.Id, out RBQList rbqI))
+                                    if (R.Next(0, 100) >= 70)
                                     {
-                                        rbqItem.Stop();
-                                        rbqI.LockCount--;
-                                        rbqI.StartLockTime = rbq.StartLockTime;
-                                        rbqI.ResetTimer();
+                                        rbq.LockCount++;
+                                        rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
+                                        Program.DB.SetRBQStatus(rbq);
+                                        if (Program.List.TryRemove(rbq.Id, out RBQList rbqI))
+                                        {
+                                            rbqItem.Stop();
+                                            rbqI.LockCount++;
+                                            rbqI.StartLockTime = rbq.StartLockTime;
+                                            rbqI.ResetTimer();
+
+                                            Program.List.TryAdd(rbq.Id, rbqI);
+                                        }
+
                                         Program.DB.SetRBQPointAdd1(rbq.RBQId);
 
-                                        Program.List.TryAdd(rbq.Id, rbqI);
+                                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                                        botClient.SendTextMessageAsync(
+                                            chatId: message.Chat.Id,
+                                            disableNotification: true,
+                                            parseMode: ParseMode.Html,
+                                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣扎的次数");
+                                    }
+                                    else
+                                    {
+                                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                                        botClient.SendTextMessageAsync(
+                                            chatId: message.Chat.Id,
+                                            disableNotification: true,
+                                            parseMode: ParseMode.Html,
+                                            text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!");
                                     }
                                 }
+                                #endregion
+
+                                #region 输入规范的绒布球处理
+                                else // 合规 并进行挣扎计数-1 并重置时间
+                                {
+                                    if (rbq.LockCount-1 == 0)
+                                    {
+                                        var gag = Program.DB.GetGagItemInfo(rbq.GagId);
+                                        var R = new Random();
+
+                                        rbq.LockCount = 0;
+                                        rbq.FromId = new long[0];
+                                        rbq.GagId = 0;
+                                        rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
+                                        Program.DB.SetRBQStatus(rbq);
+                                        Program.DB.SetRBQPointAdd1(rbq.RBQId);
+
+                                        botClient.SendTextMessageAsync(
+                                            chatId: message.Chat.Id,
+                                            disableNotification: true,
+                                            parseMode: ParseMode.Html,
+                                            text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 成功挣脱了被人们安装的 <code>{gag.Name}</code>!\n{gag.UnLockMsg[R.Next(0, gag.UnLockMsg.Length)]}");
+
+                                        Program.List.TryRemove(rbq.Id, out RBQList rbqx);
+                                        rbqx.Stop();
+                                    }
+                                    else if (rbq.LockCount-1 > 0)
+                                    {
+                                        rbq.LockCount--;
+                                        rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
+                                        Program.DB.SetRBQStatus(rbq);
+
+                                        if (Program.List.TryRemove(rbq.Id, out RBQList rbqI))
+                                        {
+                                            rbqItem.Stop();
+                                            rbqI.LockCount--;
+                                            rbqI.StartLockTime = rbq.StartLockTime;
+                                            rbqI.ResetTimer();
+                                            Program.DB.SetRBQPointAdd1(rbq.RBQId);
+
+                                            Program.List.TryAdd(rbq.Id, rbqI);
+                                        }
+                                    }
+                                }
+                                #endregion
                             }
-                            #endregion
                         }
-                    }
-                    #endregion
-                    else // 无口塞无计时器
-                    {
-                        if (message.Text[0] == '/') CommandProcess(botClient, message);
+                        #endregion
                     }
                 }
             }
             else
             {
-                Console.WriteLine($"ChatId:{message.Chat.Id} ChatName:{message.Chat?.Username} ChatNick:{message.Chat?.FirstName} {message.Chat?.LastName} 试图使用机器人!");
-                botClient.SendTextMessageAsync(
-                    chatId: message.Chat.Id,
-                    disableNotification: true,
-                    parseMode: ParseMode.Html,
-                    text: $"请联系 <a href=\"tg://user?id={Program.DebugUserId}\">管理员</a> 允许启用本机器人!");
+                Console.WriteLine($"未验证的 ChatId:{message.Chat.Id} ChatName:{message.Chat?.Username} ChatTitle: {message.Chat?.Title} ChatLink: {message.Chat?.InviteLink} ChatNick:{message.Chat?.FirstName} {message.Chat?.LastName} 试图使用机器人!");
             }
         }
 
@@ -1681,21 +1708,22 @@ namespace RBQBot
             switch (comm[0])
             {
                 case "/count":
-                    CountProcess(botClient, message);
+                    if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowGag) == true) CountProcess(botClient, message);
                     break;
                 case "/gag":
-                    GagProcess(botClient, message, comm);
+                    if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowGag) == true) GagProcess(botClient, message, comm);
                     break;
                 case "/rbqpoint":
-                    RBQPointProcess(botClient, message);
+                    if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowGag) == true) RBQPointProcess(botClient, message);
                     break;
                 case "/list":
-                    botClient.SendTextMessageAsync(
-                        chatId: message.Chat.Id,
-                        replyToMessageId: message.MessageId,
-                        disableNotification: true,
-                        parseMode: ParseMode.Html,
-                        text: GetAllGag());
+                    if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowGag) == true) 
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: GetAllGag());
                     break;
                 case "/ping":
                     if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id)) PingProcess(botClient, message);
@@ -1703,14 +1731,17 @@ namespace RBQBot
                             chatId: message.Chat.Id,
                             replyToMessageId: message.MessageId,
                             disableNotification: true,
+                            parseMode: ParseMode.Html,
                             text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 不是管理员, 不能使用此命令!");
                     break;
                 case "/verify":
-                    botClient.SendTextMessageAsync(
-                        chatId: message.Chat.Id,
-                        replyToMessageId: message.MessageId,
-                        disableNotification: true,
-                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图使用验证命令, 但此命令只允许加入时的用户使用!");
+                    if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true)
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图使用验证命令, 但此命令只允许加入时的用户使用!");
                     break;
                 case "/help":
                     Help(botClient, message);
@@ -1718,12 +1749,46 @@ namespace RBQBot
                 case "/about":
                     About(botClient, message);
                     break;
-                default:
+                case "/privacy":
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
                         replyToMessageId: message.MessageId,
                         disableNotification: true,
-                        text: "命令错误! 请输入 /help 查看命令!");
+                        text: Program.PrivacyTxt);
+                    break;
+#if DEBUG
+                case "/test1":
+                    Program.MsgCountTm_Elapsed(null, null);
+                    break;
+                //case "/test2":
+                    //InlineKeyboardMarkup inlineKeyboard = new(new[] {
+                    //    new [] {
+                    //        InlineKeyboardButton.WithCallbackData(text: "我不可爱,别验证我", callbackData: "kickme"),
+                    //        InlineKeyboardButton.WithCallbackData(text: "我很可爱,请验证我", callbackData: "verifyme"),
+                    //    },
+                    //    new [] {
+                    //        InlineKeyboardButton.WithCallbackData(text: "管理通过", callbackData: $"adminverify {message.Chat.Id} {message.From.Id}"),
+                    //        InlineKeyboardButton.WithCallbackData(text: "管理踢出", callbackData: $"adminkick {message.Chat.Id} {message.From.Id}"),
+                    //    }
+                    //});
+                    //var result = botClient.SendTextMessageAsync(
+                    //    chatId: message.Chat.Id,
+                    //    text: "测试登录验证",
+                    //    disableNotification: true,
+                    //    replyToMessageId: message.MessageId,
+                    //    replyMarkup: inlineKeyboard).Result;
+
+                    //var b = new WaitBan(message.Chat.Id, message.From.Id, result.MessageId, 120000, botClient);
+                    //Program.BanList.TryAdd(message.From.Id, b); // 不能用From id，要用新加入人的ID
+                    //break;
+#endif
+                default:
+                    if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true)
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "命令错误! 请输入 /help 查看命令!");
                     break;
             }
         }
@@ -1733,21 +1798,24 @@ namespace RBQBot
         {
             if (Program.DB.GetAllowGroupExist(message.Chat.Id)) // 消息进入
             {
-                if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0, false); // 检查是否注册RBQ的全局信息
-                if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false); // 检查是否注册RBQ的群组状态信息
-
-                var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.From.Id);
-                if (rbq != null)
+                if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowGag) == true)
                 {
-                    var time = new DateTime(rbq.StartLockTime).AddMinutes(Program.LockTime);
-                    if (rbq.LockCount > 0 && DateTime.UtcNow.AddHours(8) < time)
+                    if (Program.DB.GetRBQExist(message.From.Id) != true) Program.DB.AddRBQ(message.From.Id, 0); // 检查是否注册RBQ的全局信息
+                    if (Program.DB.GetRBQStatusExist(message.Chat.Id, message.From.Id) != true) Program.DB.AddRBQStatus(message.Chat.Id, message.From.Id, 0, false); // 检查是否注册RBQ的群组状态信息
+
+                    var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.From.Id);
+                    if (rbq != null)
                     {
-                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                        botClient.SendTextMessageAsync(
-                            chatId: message.Chat.Id,
-                            disableNotification: true,
-                            parseMode: ParseMode.Html,
-                            text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!");
+                        var time = new DateTime(rbq.StartLockTime).AddMinutes(Program.LockTime);
+                        if (rbq.LockCount > 0 && DateTime.UtcNow.AddHours(8) < time)
+                        {
+                            botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                disableNotification: true,
+                                parseMode: ParseMode.Html,
+                                text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!");
+                        }
                     }
                 }
             }
