@@ -152,26 +152,21 @@ namespace RBQBot
             var count = Program.DB.GetGagItemCount();
             var gag = Program.DB.GetAllGagItems();
             var sb = new StringBuilder();
-            sb.AppendLine($"一共有 {count} 个口塞.");
-            sb.AppendLine($"{"口塞名字",0}{"要求绒度",15}{"挣扎次数",20}");
-            sb.AppendLine("================================");
+            sb.AppendLine($"一共有 {count} 个口塞. (点击蓝色字体即可复制)");
             foreach (var i in gag)
             {
-                var limit = i.ShowLimit ? i.LimitPoint.ToString() : "??";
-                var unlock = i.ShowUnlock ? i.UnLockCount.ToString() : "??";
+                var limit = i.ShowLimit ? i.LimitPoint.ToString() : "未知";
+                var unlock = i.ShowUnlock ? i.UnLockCount.ToString() : "未知";
 
-                var namex = $"{i.Name}   ";
-                limit = $"   {limit}   ";
-                unlock = $"   {unlock}   ";
-
-                sb.AppendLine($"<code>{namex,0}</code>{limit,15}{unlock,25}");
+                sb.AppendLine($"<code>{i.Name}</code> 要求绒度 「{limit}」 挣扎次数 「{unlock}」");
             }
-            sb.AppendLine("================================");
             return sb.ToString();
         }
 
         private static async void PingProcess(ITelegramBotClient botClient, Message message)
         {
+            Console.WriteLine();
+            Console.WriteLine($"Pong!\nFrom : {message.Chat.Id} ChatTitle: {message.Chat?.Title} ChatName: {message.Chat?.Username} ChatNick: {message.Chat?.FirstName} {message.Chat?.LastName}");
             #region 通用获取 CPU/MEM 使用率
             Task<CpuMemStruct> proc = new Task<CpuMemStruct>(() =>
             {
@@ -198,7 +193,7 @@ namespace RBQBot
                         startTm = DateTime.UtcNow;
                         startCpuUsage = p[i].TotalProcessorTime;
 
-                        Thread.Sleep(25);
+                        Thread.Sleep(15);
 
                         stopTm = DateTime.UtcNow;
                         stopCpuUsage = p[i].TotalProcessorTime;
@@ -208,7 +203,7 @@ namespace RBQBot
                         cpuUsageTotal = cpuUsedMs / (Environment.ProcessorCount * totalMsPassed);
                         allCpuTm += cpuUsageTotal * 100;
                     }
-                    catch (Exception ex) { Console.WriteLine($"获取 CPU/MEM 使用率时错误!错误信息: {ex.Message}"); }
+                    catch (Exception ex) { Console.WriteLine($"获取 CPU/MEM 使用率时错误!{Environment.NewLine}错误信息: {Environment.NewLine}{ex.Message}{Environment.NewLine}错误堆栈:{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}"); }
                 }
 
                 return new CpuMemStruct() { UsedCpu = allCpuTm, UsedMem = allUsedMem };
@@ -230,11 +225,11 @@ namespace RBQBot
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"获取剩余可用空间失败!错误信息:{Environment.NewLine}{ex.Message}");
+                Console.WriteLine($"获取剩余可用空间失败!{Environment.NewLine}错误信息: {Environment.NewLine}{ex.Message}{Environment.NewLine}错误堆栈:{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}");
             }
 
             proc.Wait();
-            Console.WriteLine(proc.Result.UsedCpu);
+
             var allow = "";
             if (message.Chat.Type == ChatType.Private) allow = "您拥有管理权限";
             else
@@ -249,6 +244,7 @@ namespace RBQBot
                 disableNotification: true,
                 parseMode: ParseMode.Html,
                 text: $"Pong!\n电子绒布球 v{Program.Version}\n服务器当前时间: {DateTime.UtcNow.AddHours(8)}\n距离上次重启: {new TimeSpan(DateTime.UtcNow.AddHours(8).Ticks-Program.StartTime.Ticks)}\n可用磁盘: {diskSize} MB\n可用内存: {(allMem - proc.Result.UsedMem).ToString("0.00")}MB\nCPU使用率: {proc.Result.UsedCpu.ToString("0.00")}%\n当前会话 「{message.Chat.Title}」 {allow}\n有关更多信息请参阅 「<code>/about</code>」\n{"本Bot具有超级绒力",20}");
+            Console.WriteLine();
         }
 
         private static void Help(ITelegramBotClient botClient, Message message)
@@ -315,8 +311,8 @@ namespace RBQBot
         private static void CountProcess(ITelegramBotClient botClient, Message message)
         {
             var lockCount = Program.DB.GetRBQLockCount(message.Chat.Id, message.From.Id);
-            var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 还需要挣扎 {lockCount} 次.";
-            if (lockCount == 0) msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 好像想念口塞了.";
+            var msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 还需要挣扎 {lockCount} 次.";
+            if (lockCount == 0) msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 好像想念口塞了.";
 
             botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
             botClient.SendTextMessageAsync(
@@ -361,7 +357,7 @@ namespace RBQBot
                                     chatId: message.Chat.Id,
                                     disableNotification: true,
                                     parseMode: ParseMode.Html,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图修改 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 的开关! 但Ta没有权限!")/*.Result*/;
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图修改 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的开关! 但Ta没有权限!")/*.Result*/;
 
                                 //ThreadPool.QueueUserWorkItem(o => { DelayDeleteMessage(botClient, message.Chat.Id, result.MessageId, 5000); });
                             }
@@ -375,7 +371,7 @@ namespace RBQBot
                                         chatId: message.Chat.Id,
                                         disableNotification: true,
                                         parseMode: ParseMode.Html,
-                                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已将 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 变为公用型绒布球!");
+                                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已强制让 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 接受被人公共调教!");
                                 }
                                 else
                                 {
@@ -385,7 +381,7 @@ namespace RBQBot
                                         chatId: message.Chat.Id,
                                         disableNotification: true,
                                         parseMode: ParseMode.Html,
-                                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已将 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 变为个人型绒布球!");
+                                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已强制让 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 拒绝被人公共调教!");
                                 }
                             }
                         }
@@ -412,7 +408,7 @@ namespace RBQBot
                                         chatId: message.Chat.Id,
                                         disableNotification: true,
                                         parseMode: ParseMode.Html,
-                                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{comm[1]}</code> ,但对方不是公用型绒布球!");
+                                        text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 使用 <code>{comm[1]}</code> ,但对方不是公用型绒布球!");
                                 }
                                 #endregion
                                 else
@@ -425,7 +421,7 @@ namespace RBQBot
                                             chatId: message.Chat.Id,
                                             disableNotification: true,
                                             parseMode: ParseMode.Html,
-                                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{comm[1]}</code>,\n但 <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已经添加/加固过 <a href=\"tg://user?id={message.ReplyToMessage?.From.Id}\">{message.ReplyToMessage?.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 的口塞了!");
+                                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 使用 <code>{comm[1]}</code>,\n但 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已经添加/加固过 <a href=\"tg://user?id={message.ReplyToMessage?.From.Id}\">{message.ReplyToMessage?.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 的口塞了!");
                                     }
                                     #endregion
                                     else
@@ -443,7 +439,7 @@ namespace RBQBot
                                                     chatId: message.Chat.Id,
                                                     disableNotification: true,
                                                     parseMode: ParseMode.Html,
-                                                    text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 已经有一个 <code>{gag.Name}</code> 了!\n<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 可以使用/gag 回复这只绒布球来加固.");
+                                                    text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 已经有一个 <code>{gag.Name}</code> 了!\n<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 可以使用/gag 回复这只绒布球来加固.");
                                             }
                                             else
                                             {
@@ -470,7 +466,7 @@ namespace RBQBot
                                                         chatId: message.Chat.Id,
                                                         disableNotification: true,
                                                         parseMode: ParseMode.Html,
-                                                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{gag.Name}</code>, 但绒布球的绒度不够!");
+                                                        text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 使用 <code>{gag.Name}</code>, 但绒布球的绒度不够!");
                                                 }
                                                 else
                                                 {
@@ -481,7 +477,7 @@ namespace RBQBot
                                                             chatId: message.Chat.Id,
                                                             disableNotification: true,
                                                             parseMode: ParseMode.Html,
-                                                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 使用 <code>{gag.Name}</code>, 但绒布球刚挣脱没多久!");
+                                                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 使用 <code>{gag.Name}</code>, 但绒布球刚挣脱没多久!");
                                                     }
                                                     else
                                                     {
@@ -497,7 +493,7 @@ namespace RBQBot
 
                                                         Program.DB.SetRBQStatus(rbq);
 
-                                                        var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 戴上了 <code>{comm[1]}</code>!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
+                                                        var msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 戴上了 <code>{comm[1]}</code>!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
 
                                                         #region 内存队列存在检查
                                                         if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -542,7 +538,7 @@ namespace RBQBot
                                                 rbq.GagId = gag.Id;
                                                 Program.DB.SetRBQStatus(rbq);
 
-                                                var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 戴上了 {comm[1]}!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
+                                                var msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 戴上了 {comm[1]}!\n{gag.LockMsg[R.Next(0, gag.LockMsg.Length)]}";
 
                                                 #region 内存队列存在检查
                                                 if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -590,7 +586,7 @@ namespace RBQBot
                                 chatId: message.Chat.Id,
                                 disableNotification: true,
                                 parseMode: ParseMode.Html,
-                                text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已经给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 添加/加固过口塞了,就放过Ta吧.");
+                                text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已经给 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 添加/加固过口塞了,就放过Ta吧.");
                         }
                         #endregion
                         else
@@ -634,7 +630,7 @@ namespace RBQBot
                                     chatId: message.Chat.Id,
                                     disableNotification: true,
                                     parseMode: ParseMode.Html,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> {gag.EnhancedLockMsg[R.Next(0, gag.EnhancedLockMsg.Length)]}");
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 帮 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> {gag.EnhancedLockMsg[R.Next(0, gag.EnhancedLockMsg.Length)]}");
                             }
                             else
                             {
@@ -668,7 +664,7 @@ namespace RBQBot
                             chatId: message.Chat.Id,
                             disableNotification: true,
                             parseMode: ParseMode.Html,
-                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 可以被公开调教了!");
+                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 想要被公开调教了!");
                         return;
                     }
                     if (comm[1] == "off")
@@ -679,7 +675,7 @@ namespace RBQBot
                             chatId: message.Chat.Id,
                             disableNotification: true,
                             parseMode: ParseMode.Html,
-                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 不愿意再被公开调教了!");
+                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 不愿意被公开调教了!");
                         return;
                     }
 
@@ -710,7 +706,7 @@ namespace RBQBot
                             rbq.GagId = gag.Id;
                             Program.DB.SetRBQStatus(rbq);
 
-                            var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
+                            var msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
 
                             #region 内存队列存在检查
                             if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -748,7 +744,7 @@ namespace RBQBot
                                     chatId: message.Chat.Id,
                                     disableNotification: true,
                                     parseMode: ParseMode.Html,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 的绒度不够使用 <code>{gag.Name}</code>!");
+                                    text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 的绒度不够使用 <code>{gag.Name}</code>!");
                             }
                             else
                             {
@@ -763,7 +759,7 @@ namespace RBQBot
                                 rbq.GagId = gag.Id;
                                 Program.DB.SetRBQStatus(rbq);
 
-                                var msg = $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
+                                var msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
 
                                 #region 内存队列存在检查
                                 if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
@@ -801,7 +797,7 @@ namespace RBQBot
                         chatId: message.Chat.Id,
                         disableNotification: true,
                         parseMode: ParseMode.Html,
-                        text: $"参数不够!请重新输入!");
+                        text: $"参数不够!请输入 /help 查看帮助!");
                 }
             }
             #endregion
@@ -834,7 +830,7 @@ namespace RBQBot
                         replyToMessageId: message.MessageId,
                         disableNotification: true,
                         parseMode: ParseMode.Html,
-                        text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\">{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</a> 的绒度为 {point}");
+                        text: $"<a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的绒度为 {point}");
                 }
             }
             else
@@ -846,7 +842,7 @@ namespace RBQBot
                     replyToMessageId: message.MessageId,
                     disableNotification: true,
                     parseMode: ParseMode.Html,
-                    text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 的绒度为 {point}");
+                    text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 的绒度为 {point}");
             }
         }
         #endregion
@@ -857,7 +853,7 @@ namespace RBQBot
         {
             var ErrorMessage = exception switch
             {
-                ApiRequestException apiRequestException => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
+                ApiRequestException apiRequestException => $"Telegram API Error:{Environment.NewLine}[{apiRequestException.ErrorCode}]{Environment.NewLine}{apiRequestException.Message}{Environment.NewLine}错误信息: {Environment.NewLine}{exception.Message}{Environment.NewLine}错误堆栈:{Environment.NewLine}{exception.StackTrace}{Environment.NewLine}",
                 _ => exception.ToString()
             };
 
@@ -888,6 +884,7 @@ namespace RBQBot
             catch (Exception exception)
             {
                 await HandleErrorAsync(botClient, exception, cancellationToken);
+                Console.WriteLine($"消息处理时出错: {Environment.NewLine}错误信息: {Environment.NewLine}{exception.Message}{Environment.NewLine}错误堆栈:{Environment.NewLine}{exception.StackTrace}{Environment.NewLine}");
             }
         }
 
@@ -920,6 +917,7 @@ namespace RBQBot
             catch (Exception exception)
             {
                 await HandleErrorAsync(botClient, exception, cancellationToken);
+                Console.WriteLine($"消息拦截时出错: {Environment.NewLine}错误信息: {Environment.NewLine}{exception.Message}{Environment.NewLine}错误堆栈:{Environment.NewLine}{exception.StackTrace}{Environment.NewLine}");
             }
         }
 
@@ -1416,7 +1414,7 @@ namespace RBQBot
                 }
                 else
                 {
-                    Console.WriteLine($"本Bot被 UserId:{message.From.Id} {message.From?.Username} {message.From.FirstName} {message.From?.LastName} 丢出 GroupId:{message.Chat.Id} {message.Chat?.Username} {message.Chat?.Title}");
+                    Console.WriteLine($"本Bot被 UserId:{message.From.Id} {message.From?.Username} <b><u>{message.From.FirstName} {message.From?.LastName}</u></b> 丢出 GroupId:{message.Chat.Id} {message.Chat?.Username} {message.Chat?.Title}");
                 }
             }
         }
@@ -1524,7 +1522,7 @@ namespace RBQBot
                                     chatId: message.Chat.Id,
                                     disableNotification: false,
                                     parseMode: ParseMode.Html,
-                                    text: $"验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 还有 {3-ban.FailCount} 次验证机会.").Result;
+                                    text: $"验证失败! <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 还有 {3-ban.FailCount} 次验证机会.").Result;
 
                                 Program.BanList.TryAdd(ban.UserId, ban);
                             }
@@ -1541,7 +1539,7 @@ namespace RBQBot
                                     chatId: message.Chat.Id,
                                     disableNotification: true,
                                     parseMode: ParseMode.Html,
-                                    text: $"由于多次验证失败! <a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 已被移出本群.");
+                                    text: $"由于多次验证失败! <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已被移出本群.");
                             }
                         }
                         else
@@ -1625,7 +1623,7 @@ namespace RBQBot
                                             chatId: message.Chat.Id,
                                             disableNotification: true,
                                             parseMode: ParseMode.Html,
-                                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣扎的次数");
+                                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣扎的次数");
                                     }
                                     else
                                     {
@@ -1634,7 +1632,7 @@ namespace RBQBot
                                             chatId: message.Chat.Id,
                                             disableNotification: true,
                                             parseMode: ParseMode.Html,
-                                            text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!");
+                                            text: $"<a href=\"tg://user?id={message.From?.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图逃脱口塞的限制!");
                                     }
                                 }
                                 #endregion
@@ -1658,7 +1656,7 @@ namespace RBQBot
                                             chatId: message.Chat.Id,
                                             disableNotification: true,
                                             parseMode: ParseMode.Html,
-                                            text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 成功挣脱了被人们安装的 <code>{gag.Name}</code>!\n{gag.UnLockMsg[R.Next(0, gag.UnLockMsg.Length)]}");
+                                            text: $"<a href=\"tg://user?id={message.From?.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 成功挣脱了被人们安装的 <code>{gag.Name}</code>!\n{gag.UnLockMsg[R.Next(0, gag.UnLockMsg.Length)]}");
 
                                         Program.List.TryRemove(rbq.Id, out RBQList rbqx);
                                         rbqx.Stop();
@@ -1732,7 +1730,7 @@ namespace RBQBot
                             replyToMessageId: message.MessageId,
                             disableNotification: true,
                             parseMode: ParseMode.Html,
-                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 不是管理员, 不能使用此命令!");
+                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 不是管理员, 不能使用此命令!");
                     break;
                 case "/verify":
                     if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true)
@@ -1741,7 +1739,7 @@ namespace RBQBot
                             replyToMessageId: message.MessageId,
                             disableNotification: true,
                             parseMode: ParseMode.Html,
-                            text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图使用验证命令, 但此命令只允许加入时的用户使用!");
+                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图使用验证命令, 但此命令只允许加入时的用户使用!");
                     break;
                 case "/help":
                     Help(botClient, message);
@@ -1814,7 +1812,7 @@ namespace RBQBot
                                 chatId: message.Chat.Id,
                                 disableNotification: true,
                                 parseMode: ParseMode.Html,
-                                text: $"<a href=\"tg://user?id={message.From?.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 试图逃脱口塞的限制!");
+                                text: $"<a href=\"tg://user?id={message.From?.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图逃脱口塞的限制!");
                         }
                     }
                 }
