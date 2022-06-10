@@ -278,7 +278,7 @@ namespace RBQBot
                     {
                         if (kvp[si].UserId == 0) break;
                         var result = Bot.GetChatMemberAsync(group[i], kvp[si].UserId).Result;
-                        sb.AppendLine($"TOP {si+1} :  <a href=\"tg://user?id={kvp[si].UserId}\">{result.User.FirstName} {result.User?.LastName}</a>  ({kvp[si].Count})");
+                        sb.AppendLine($"TOP {si+1} :  <a href=\"tg://user?id={kvp[si].UserId}\"><b><u>{result.User.FirstName} {result.User?.LastName}</b></u></a>  ({kvp[si].Count})");
                     }
 
                     Bot.SendTextMessageAsync(
