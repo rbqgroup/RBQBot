@@ -81,6 +81,8 @@ namespace RBQBot
             if (result != null) allowGroupCol.Delete(result.Id);
         }
 
+        public IEnumerable<AllowGroup> GetAllowGroups() => allowGroupCol.FindAll();
+
         public AllowGroup GetAllowGroup(long groupId)
         {
             var result = allowGroupCol.FindOne(x => x.GroupId == groupId);

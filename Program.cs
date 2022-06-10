@@ -124,10 +124,13 @@ namespace RBQBot
             }
             #endregion
 
-            var proxy = new HttpToSocks5Proxy("127.0.0.1", 55555);
-            var httpClient = new HttpClient(new HttpClientHandler { Proxy = proxy, UseProxy = true });
+#if DEBUG
+            //var proxy = new HttpToSocks5Proxy("127.0.0.1", 55555);
+            //var httpClient = new HttpClient(new HttpClientHandler { Proxy = proxy, UseProxy = true });
 
-            Bot = new TelegramBotClient("", httpClient);
+            //Bot = new TelegramBotClient("", httpClient);
+#endif
+            Bot = new TelegramBotClient("");
 
             using (var cts = new CancellationTokenSource())
             {
@@ -188,12 +191,9 @@ namespace RBQBot
                 msgCountTm.Start();
                 #endregion
 
-                Console.WriteLine("Running...");
-                while (true)
-                {
-                    Console.ReadLine();
-                    Console.Clear();
-                }
+                Console.Write("Running... 输入1 查看功能列表\n主菜单 > ");
+
+                ConsoleHelper();
 
                 // Send cancellation request to stop bot
 #pragma warning disable CS0162 // 检测到无法访问的代码
@@ -201,6 +201,510 @@ namespace RBQBot
 #pragma warning restore CS0162 // 检测到无法访问的代码
             }
         }
+
+        #region 控制台操作
+        private static readonly string ConsoleCommandList =
+            "c 清屏\n" +
+            "1 命令列表\n" +
+            "2 允许群组控制\n" +
+            "3 口塞列表控制\n" +
+            "4 绒布球全局控制 (功能暂未实现!)\n" +
+            "5 绒布球状态控制 (功能暂未实现!)\n" +
+            "6 消息统计控制 (功能暂未实现!)\n" +
+            //"- 上一页\n" +
+            //"+ 下一页\n" +
+            //"9 返回上级\n" +
+            "* 对所有已允许群组广播消息\n" +
+            "0 退出程序";
+
+        private static readonly string AllowGroupCommandList =
+            "c 清屏\n" +
+            "1 命令列表\n" +
+            "2 输出已允许的群组列表\n" +
+            "3 添加允许群组\n" +
+            "4 删除允许群组\n" +
+            "5 设置已允许的群组功能\n" +
+            "9 返回上级";
+
+        private static readonly string GagItemCommandList =
+            "c 清屏\n" +
+            "1 命令列表\n" +
+            "2 输出口塞列表\n" +
+            "3 添加口塞\n" +
+            "4 删除口塞\n" +
+            "5 设置已有口塞参数\n" +
+            "9 返回上级";
+
+        private static void ConsoleHelper()
+        {
+            var command = Console.ReadLine();
+            while (command != "0")
+            {
+                switch (command)
+                {
+                    case "c": Console.Clear(); break;
+                    case "0": Environment.Exit(0); break;
+                    case "1": Console.WriteLine(ConsoleCommandList); break;
+                    case "2": AllowGroupOperate(); break;
+                    case "3": GagItemOperate(); break;
+                    case "4": Console.WriteLine("功能暂未实现!"); break;
+                    case "5": Console.WriteLine("功能暂未实现!"); break;
+                    case "6": Console.WriteLine("功能暂未实现!"); break;
+                    case "*": SendChatMsg(); break;
+                    default: Console.WriteLine("未知命令, 请输入 1 查看命令列表."); break;
+                }
+                Console.WriteLine();
+                Console.Write("主菜单 > ");
+                command = Console.ReadLine();
+            }
+        }
+
+        private static void SendChatMsg()
+        {
+            Console.WriteLine("请输入消息(换行符为\\n): ");
+            var msg = Console.ReadLine();
+            Console.Write("请输入格式类型(1为HTML 2为Markdown 3为Markdown V2): ");
+            var ab = Console.ReadLine();
+            while (ab != "1" && ab != "2" && ab != "3")
+            {
+                Console.Write("输入错误!请重新输入(1为HTML 2为Markdown 3为Markdown V2): ");
+                ab = Console.ReadLine();
+            }
+            var psMod = Telegram.Bot.Types.Enums.ParseMode.Html;
+            switch (ab)
+            {
+                case "1": psMod = Telegram.Bot.Types.Enums.ParseMode.Html; break;
+                case "2": psMod = Telegram.Bot.Types.Enums.ParseMode.Markdown; break;
+                case "3": psMod= Telegram.Bot.Types.Enums.ParseMode.MarkdownV2; break;
+            }
+            Console.Write("是否静音发送(y/n): ");
+            var yn = Console.ReadLine();
+            while (yn != "y" && yn != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                yn = Console.ReadLine();
+            }
+            var groups = DB.GetAllowGroups();
+            foreach (var i in groups)
+            {
+                Bot.SendTextMessageAsync(
+                    chatId: i.GroupId,
+                    disableNotification: yn == "y" ? true : false,
+                    parseMode: psMod,
+                    text: msg);
+            }
+            Console.WriteLine("主菜单 > 广播完成!");
+        }
+
+        #region 允许群组控制
+        private static void AllowGroupOperate()
+        {
+            Console.Write("请输入 1 查看功能列表\n主菜单 > 允许群组控制 > ");
+            var command = Console.ReadLine();
+            while (command != "9")
+            {
+                switch (command)
+                {
+                    case "c": Console.Clear(); break;
+                    case "1":
+                        Console.WriteLine(AllowGroupCommandList);
+                        break;
+                    case "2":
+                        PrintAllowGroup();
+                        break;
+                    case "3":
+                        AddAllowGroup();
+                        break;
+                    case "4":
+                        DelAllowGroup();
+                        break;
+                    case "5":
+                        SetAllowGroup();
+                        break;
+                    case "9": break;
+                    default:
+                        Console.WriteLine("未知命令, 请输入 1 查看命令列表.");
+                        break;
+                }
+                Console.WriteLine();
+                Console.Write("主菜单 > 允许群组控制 > ");
+                command = Console.ReadLine();
+            }
+        }
+
+        private static void PrintAllowGroup()
+        {
+            var groups = DB.GetAllowGroups();
+            foreach (var i in groups)
+            {
+                try
+                {
+                    var result = Bot.GetChatAsync(i.GroupId).Result;
+                    Console.WriteLine($"群组Id: {i.GroupId} 群组名称: {result?.Title} @{result?.Username} 允许口塞: {i.AllowGag} 允许验证: {i.AllowVerify} 允许消息计数: {i.AllowMsgCount} 每日计数消息: {i.SamplyMsgCountStr}");
+                }
+                catch (Exception)
+                {
+                    DB.DelAllowGroup(i.GroupId);
+                    Console.WriteLine($"错误! 找不到群组Id为 {i.GroupId} 群组!已移除该群组!");
+                }
+            }
+        }
+
+        private static void AddAllowGroup()
+        {
+            Console.Write("请输入群组Id: ");
+            var id = Convert.ToInt64(Console.ReadLine());
+            if (DB.GetAllowGroupExist(id) == true) { Console.WriteLine($"群组已存在!"); return; }
+
+            DB.AddAllowGroup(id);
+            var group = DB.GetAllowGroup(id);
+
+            Console.Write("是否允许该群组使用口塞(输入y/n): ");
+            var ab = Console.ReadLine();
+            while (ab != "y" && ab != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                ab = Console.ReadLine();
+            }
+            if (ab == "y") group.AllowGag = true; else group.AllowGag = false;
+
+            Console.Write("是否允许该群组使用验证(输入y/n): ");
+            ab = Console.ReadLine();
+            while (ab != "y" && ab != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                ab = Console.ReadLine();
+            }
+            if (ab == "y") group.AllowVerify = true; else group.AllowVerify = false;
+
+            Console.Write("是否允许该群组使用消息计数(输入y/n): ");
+            ab = Console.ReadLine();
+            while (ab != "y" && ab != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                ab = Console.ReadLine();
+            }
+            if (ab == "y") group.AllowMsgCount = true; else group.AllowMsgCount = false;
+
+            Console.WriteLine("请输入每日消息计数欢迎语: ");
+            group.SamplyMsgCountStr = Console.ReadLine();
+
+            DB.SetAllowGroup(group);
+
+            Console.WriteLine($"主菜单 > 允许群组控制 > 添加成功!");
+        }
+
+        private static void DelAllowGroup()
+        {
+            Console.Write("请输入群组Id: ");
+            var id = Convert.ToInt64(Console.ReadLine());
+            if (DB.GetAllowGroupExist(id) != true) { Console.WriteLine("群组不存在!"); return; }
+
+            DB.DelAllowGroup(id);
+            Console.WriteLine("主菜单 > 允许群组控制 > 删除成功!");
+        }
+
+        private static void SetAllowGroup()
+        {
+            Console.Write("请输入群组Id: ");
+            var id = Convert.ToInt64(Console.ReadLine());
+            if (DB.GetAllowGroupExist(id) != true) { Console.WriteLine("群组不存在!"); return; }
+
+            var group = DB.GetAllowGroup(id);
+
+            Console.Write("是否允许该群组使用口塞(输入y/n): ");
+            var ab = Console.ReadLine();
+            while (ab != "y" && ab != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                ab = Console.ReadLine();
+            }
+            if (ab == "y") group.AllowGag = true; else group.AllowGag = false;
+
+            Console.Write("是否允许该群组使用验证(输入y/n): ");
+            ab = Console.ReadLine();
+            while (ab != "y" && ab != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                ab = Console.ReadLine();
+            }
+            if (ab == "y") group.AllowVerify = true; else group.AllowVerify = false;
+
+            Console.Write("是否允许该群组使用消息计数(输入y/n): ");
+            ab = Console.ReadLine();
+            while (ab != "y" && ab != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                ab = Console.ReadLine();
+            }
+            if (ab == "y") group.AllowMsgCount = true; else group.AllowMsgCount = false;
+
+            Console.WriteLine("请输入每日消息计数欢迎语: ");
+            group.SamplyMsgCountStr = Console.ReadLine();
+
+            DB.SetAllowGroup(group);
+
+            Console.WriteLine($"主菜单 > 允许群组控制 > 设置成功!");
+        }
+        #endregion
+
+        #region 口塞列表控制
+        private static void GagItemOperate()
+        {
+            Console.Write("请输入 1 查看功能列表\n主菜单 > 口塞列表控制 > ");
+            var command = Console.ReadLine();
+            while (command != "9")
+            {
+                switch (command)
+                {
+                    case "c": Console.Clear(); break;
+                    case "1": Console.WriteLine(GagItemCommandList); break;
+                    case "2": PrintAllGagItem(); break;
+                    case "3": AddGagItem(); break;
+                    case "4": DelGagItem(); break;
+                    case "5": SetGagItem(); break;
+                    case "9": break;
+                    default: Console.WriteLine("未知命令, 请输入 1 查看命令列表."); break;
+                }
+                Console.WriteLine();
+                Console.Write("主菜单 > 口塞列表控制 > ");
+                command = Console.ReadLine();
+            }
+        }
+
+        private static void PrintAllGagItem()
+        {
+            var gags = DB.GetAllGagItems();
+            foreach (var i in gags)
+            {
+                Console.WriteLine($"口塞名字「{i.Name}」 要求绒度「{i.LimitPoint}」 挣扎次数「{i.UnLockCount}」 显示要求绒度「{i.ShowLimit}」 显示解锁次数「{i.ShowUnlock}」");
+            }
+        }
+
+        private static void AddGagItem()
+        {
+            Console.Write("请输入口塞名: ");
+            var name = Console.ReadLine();
+            if (DB.GetGagItemExist(name) == true) { Console.WriteLine("口塞已存在!"); return; }
+
+            Console.Write("请输入口塞要求绒度(Int32数字): ");
+            var limitPoint = Convert.ToInt32(Console.ReadLine());
+            Console.Write("请输入挣扎次数(Int32数字): ");
+            var unlockCount = Convert.ToInt32(Console.ReadLine());
+            Console.Write("请输入是否显示要求绒度(y/n): ");
+            var showPoint = Console.ReadLine();
+            while (showPoint != "y" && showPoint != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                showPoint = Console.ReadLine();
+            }
+            Console.Write("请输入是否显示挣脱次数(y/n): ");
+            var showUnlock = Console.ReadLine();
+            while (showUnlock != "y" && showUnlock != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                showUnlock = Console.ReadLine();
+            }
+
+            DB.AddGagItem(name, limitPoint, unlockCount, showPoint == "y" ? true : false, showUnlock == "y" ? true : false, null, null, null, null);
+
+            var gag = DB.GetGagItemInfo(name);
+
+            Console.WriteLine("接下来的输入会有些长, 使用回车继续输入, 什么都不输入直接回车将会结束输入, 您可以一开始直接回车以使用默认值");
+
+            Console.WriteLine("请输入自我佩戴口塞时的消息(咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!):");
+            var smsg = Console.ReadLine();
+            var smsgx = new string[0];
+            var smsgl = new StringBuilder();
+            while (smsg != "")
+            {
+                smsgl.AppendLine(smsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                smsg = Console.ReadLine();
+            }
+            if (smsgl.Length > 0)
+            {
+                smsg = smsgl.ToString();
+                smsgx = smsg.Split("\r\n");
+            }
+
+            Console.WriteLine("请输入被他人佩戴口塞时的消息(顺便在 Ta 身上画了一个正字~):");
+            var lmsg = Console.ReadLine();
+            var lmsgx = new string[0];
+            var lmsgl = new StringBuilder();
+            while (lmsg != "")
+            {
+                lmsgl.AppendLine(lmsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                lmsg = Console.ReadLine();
+            }
+            if (lmsgl.Length > 0)
+            {
+                lmsg = lmsgl.ToString();
+                lmsgx = lmsg.Split("\r\n");
+            }
+
+            Console.WriteLine("请输入被他人加固口塞时的消息(修好了口塞!\n顺便展示了钥匙并丢到了一边!):");
+            var emsg = Console.ReadLine();
+            var emsgx = new string[0];
+            var emsgl = new StringBuilder();
+            while (emsg != "")
+            {
+                emsgl.AppendLine(emsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                emsg = Console.ReadLine();
+            }
+            if (emsgl.Length > 0)
+            {
+                emsg = emsgl.ToString();
+                emsgx = emsg.Split("\r\n");
+            }
+
+            Console.WriteLine("请输入挣脱口塞时的消息(Ta感觉自己可以容纳更大的尺寸了呢!):");
+            var umsg = Console.ReadLine();
+            var umsgx = new string[0];
+            var umsgl = new StringBuilder();
+            while (umsg != "")
+            {
+                umsgl.AppendLine(umsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                umsg = Console.ReadLine();
+            }
+            if (umsgl.Length > 0)
+            {
+                umsg = umsgl.ToString();
+                umsgx = umsg.Split("\r\n");
+            }
+
+            if (smsgx.Length > 0) gag.SelfLockMsg = smsgx;
+            if (lmsgx.Length > 0) gag.LockMsg = lmsgx;
+            if (emsgx.Length > 0) gag.EnhancedLockMsg = emsgx;
+            if (umsgx.Length > 0) gag.UnLockMsg = umsgx;
+
+            DB.SetGagItem(gag);
+
+            Console.WriteLine("主菜单 > 口塞列表控制 > 添加成功!");
+        }
+
+        private static void DelGagItem()
+        {
+            Console.Write("请输入口塞名: ");
+            var name = Console.ReadLine();
+            if (DB.GetGagItemExist(name) != true) { Console.WriteLine("口塞不存在!"); return; }
+
+            DB.DelGagItem(name);
+
+            Console.WriteLine("主菜单 > 口塞列表控制 > 删除成功!");
+        }
+
+        private static void SetGagItem()
+        {
+            Console.Write("请输入口塞名: ");
+            var name = Console.ReadLine();
+            if (DB.GetGagItemExist(name) != true) { Console.WriteLine("口塞不存在!"); return; }
+
+            var gag = DB.GetGagItemInfo(name);
+
+            Console.Write("请输入口塞要求绒度(Int32数字): ");
+            gag.LimitPoint = Convert.ToInt32(Console.ReadLine());
+            Console.Write("请输入挣扎次数(Int32数字): ");
+            gag.UnLockCount = Convert.ToInt32(Console.ReadLine());
+            Console.Write("请输入是否显示要求绒度(y/n): ");
+            var showPoint = Console.ReadLine();
+            while (showPoint != "y" && showPoint != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                showPoint = Console.ReadLine();
+            }
+            gag.ShowLimit = showPoint == "y" ? true : false;
+            Console.Write("请输入是否显示挣脱次数(y/n): ");
+            var showUnlock = Console.ReadLine();
+            while (showUnlock != "y" && showUnlock != "n")
+            {
+                Console.Write("输入错误!请重新输入(输入y/n): ");
+                showUnlock = Console.ReadLine();
+            }
+            gag.ShowUnlock = showUnlock == "y" ? true : false;
+
+            Console.WriteLine("接下来的输入会有些长, 使用回车继续输入, 什么都不输入直接回车将会结束输入, 您可以一开始直接回车以使用默认值");
+
+            Console.WriteLine("请输入自我佩戴口塞时的消息(咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!):");
+            var smsg = Console.ReadLine();
+            var smsgx = new string[0];
+            var smsgl = new StringBuilder();
+            while (smsg != "")
+            {
+                smsgl.AppendLine(smsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                smsg = Console.ReadLine();
+            }
+            if (smsgl.Length > 0)
+            {
+                smsg = smsgl.ToString();
+                smsgx = smsg.Split("\r\n");
+            }
+
+            Console.WriteLine("请输入被他人佩戴口塞时的消息(顺便在 Ta 身上画了一个正字~):");
+            var lmsg = Console.ReadLine();
+            var lmsgx = new string[0];
+            var lmsgl = new StringBuilder();
+            while (lmsg != "")
+            {
+                lmsgl.AppendLine(lmsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                lmsg = Console.ReadLine();
+            }
+            if (lmsgl.Length > 0)
+            {
+                lmsg = lmsgl.ToString();
+                lmsgx = lmsg.Split("\r\n");
+            }
+
+            Console.WriteLine("请输入被他人加固口塞时的消息(修好了口塞!\\n顺便展示了钥匙并丢到了一边!):");
+            var emsg = Console.ReadLine();
+            var emsgx = new string[0];
+            var emsgl = new StringBuilder();
+            while (emsg != "")
+            {
+                emsgl.AppendLine(emsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                emsg = Console.ReadLine();
+            }
+            if (emsgl.Length > 0)
+            {
+                emsg = emsgl.ToString();
+                emsgx = emsg.Split("\r\n");
+            }
+
+            Console.WriteLine("请输入挣脱口塞时的消息(Ta感觉自己可以容纳更大的尺寸了呢!):");
+            var umsg = Console.ReadLine();
+            var umsgx = new string[0];
+            var umsgl = new StringBuilder();
+            while (umsg != "")
+            {
+                umsgl.AppendLine(umsg);
+                Console.WriteLine("请继续输入或输入回车结束:");
+                umsg = Console.ReadLine();
+            }
+            if (umsgl.Length > 0)
+            {
+                umsg = umsgl.ToString();
+                umsgx = umsg.Split("\r\n");
+            }
+
+            if (smsgx.Length > 0) gag.SelfLockMsg = smsgx;
+            if (lmsgx.Length > 0) gag.LockMsg = lmsgx;
+            if (emsgx.Length > 0) gag.EnhancedLockMsg = emsgx;
+            if (umsgx.Length > 0) gag.UnLockMsg = umsgx;
+
+            DB.SetGagItem(gag);
+
+            Console.WriteLine("主菜单 > 口塞列表控制 > 设置成功!");
+        }
+        #endregion
+
+
+        #endregion
 
         public static void MsgCountTm_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {

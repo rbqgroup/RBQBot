@@ -1696,9 +1696,9 @@ namespace RBQBot
         private static async void CommandProcess(ITelegramBotClient botClient, Message message)
         {
             string[] comm = new string[] { };
-            if (message.Text.ToLower().IndexOf("@rbqexbot") > 0)
+            if (message.Text.ToLower().IndexOf("@rbq_ch_bot") > 0)
             {
-                var len = message.Text.ToLower().IndexOf("@rbqexbot");
+                var len = message.Text.ToLower().IndexOf("@rbq_ch_bot");
                 comm = message.Text.Substring(0, len).ToLower().Split(' ');
             }
             else comm = message.Text.ToLower().Split(' ');
