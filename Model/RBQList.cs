@@ -9,7 +9,7 @@ namespace RBQBot
 
         /// <summary>绒布球状态主键Id</summary>
         public int Id { get; set; }
-        /// <summary>需要挣扎的次数</summary>
+        /// <summary>需要挣脱的次数</summary>
         public long LockCount { get; set; }
         /// <summary>口塞的主键ID</summary>
         public long GagId { get; set; }
