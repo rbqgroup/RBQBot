@@ -27,7 +27,8 @@ namespace RBQBot
         internal static ConcurrentDictionary<long, WaitBan> BanList;
 
         #region 配置
-        /// <summary>Debug管理员的用户Id</summary>
+        /// <summary>管理员的用户Id</summary>
+        internal static long AdminId = 66816867;
         internal static long DebugUserId = 1324338125;
         /// <summary>用户验证超时时间(毫秒)</summary>
         internal static double UserVerifyTime = 120000;
@@ -41,7 +42,26 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "1.1.8.0";
+        internal static string Version = "2.0.0.0";
+
+        internal static readonly string AdminTxt =
+            "===========超管命令(需要私聊)==========\n" +
+            "<code>/admin GetAllowGroup 分页数</code> - 获取所有允许使用的群组列表 (没写分页数就默认分页)\n" +
+            "<code>/admin AddAllowGroup 群组Id</code> - 添加允许使用的群组\n" +
+            "<code>/admin DelAllowGroup 群组Id</code> - 删除允许使用的群组\n" +
+            "<code>/admin SetAllowGroup 群组Id 允许口塞 允许验证 允许消息计数 欢迎消息</code> - 设置已允许使用的群组功能\n" +
+            "<code>/admin AddGagItem 口塞名称</code> - 添加口塞\n" +
+            "<code>/admin DelGagItem 口塞名称</code> - 删除口塞\n" +
+            "<code>/admin SetGagItem 特定Json</code> - 设置口塞参数\n" +
+            "<code>/admin AddRBQPoint 用户Id 绒度</code> - 增加绒布球绒度\n" +
+            "<code>/admin DelRBQPoint 用户Id 绒度</code> - 减少绒布球绒度\n" +
+            "<code>/admin SetRBQPoint 用户Id 绒度</code> - 设置绒布球绒度\n" +
+            "=========群管命令(需要回复消息)========\n" +
+            "<code>/admin AddRBQLockCount 次数</code> - 增加绒布球挣脱次数\n" +
+            "<code>/admin DelRBQLockCount 次数</code> - 减少绒布球挣脱次数\n" +
+            "<code>/admin ClearLockCount</code> - 清零绒布球挣脱次数\n" +
+            "<code>/admin SetGag 口塞名</code> - 设置绒布球口塞为指定口塞 (同时会设置次数设置来源为Ta自己)\n" +
+            "<code>/admin ClearGagFrom</code> - 清除用户的所有添加/加固口塞来源 (所有人再次能加固口塞)";
 
         internal static readonly string HelpTxt =
             "/count - 查询口塞次数, 只能在群组内使用.\n" +
@@ -111,9 +131,10 @@ namespace RBQBot
 
             DB = new DBHelper();
 
-            #region 初始化默认口球列表
+            #region 初始化默认口塞列表
             if (DB.GetGagItemCount() == 0)
             {
+                DB.AddGagItem("巧克力口塞", -100, 1, true, true, null, null, null, null);
                 DB.AddGagItem("胡萝卜口塞", 0, 1, true, true, null, null, null, null);
                 DB.AddGagItem("口塞球", 5, 3, true, true, null, null, null, null);
                 DB.AddGagItem("充气口塞球", 15, 10, true, true, null, null, null, null);
@@ -125,12 +146,12 @@ namespace RBQBot
             #endregion
 
 #if DEBUG
-            //var proxy = new HttpToSocks5Proxy("127.0.0.1", 55555);
-            //var httpClient = new HttpClient(new HttpClientHandler { Proxy = proxy, UseProxy = true });
-
-            //Bot = new TelegramBotClient("", httpClient);
-#endif
+            var proxy = new HttpToSocks5Proxy("127.0.0.1", 55555);
+            var httpClient = new HttpClient(new HttpClientHandler { Proxy = proxy, UseProxy = true });
+            Bot = new TelegramBotClient("", httpClient);
+#else
             Bot = new TelegramBotClient("");
+#endif
 
             using (var cts = new CancellationTokenSource())
             {
@@ -208,12 +229,6 @@ namespace RBQBot
             "1 命令列表\n" +
             "2 允许群组控制\n" +
             "3 口塞列表控制\n" +
-            "4 绒布球全局控制 (功能暂未实现!)\n" +
-            "5 绒布球状态控制 (功能暂未实现!)\n" +
-            "6 消息统计控制 (功能暂未实现!)\n" +
-            //"- 上一页\n" +
-            //"+ 下一页\n" +
-            //"9 返回上级\n" +
             "* 对所有已允许群组广播消息\n" +
             "0 退出程序";
 
@@ -247,9 +262,6 @@ namespace RBQBot
                     case "1": Console.WriteLine(ConsoleCommandList); break;
                     case "2": AllowGroupOperate(); break;
                     case "3": GagItemOperate(); break;
-                    case "4": Console.WriteLine("功能暂未实现!"); break;
-                    case "5": Console.WriteLine("功能暂未实现!"); break;
-                    case "6": Console.WriteLine("功能暂未实现!"); break;
                     case "*": SendChatMsg(); break;
                     default: Console.WriteLine("未知命令, 请输入 1 查看命令列表."); break;
                 }
@@ -354,7 +366,7 @@ namespace RBQBot
         {
             Console.Write("请输入群组Id: ");
             var id = Convert.ToInt64(Console.ReadLine());
-            if (DB.GetAllowGroupExist(id) == true) { Console.WriteLine($"群组已存在!"); return; }
+            if (DB.GetAllowGroupExists(id) == true) { Console.WriteLine($"群组已存在!"); return; }
 
             DB.AddAllowGroup(id);
             var group = DB.GetAllowGroup(id);
@@ -398,7 +410,7 @@ namespace RBQBot
         {
             Console.Write("请输入群组Id: ");
             var id = Convert.ToInt64(Console.ReadLine());
-            if (DB.GetAllowGroupExist(id) != true) { Console.WriteLine("群组不存在!"); return; }
+            if (DB.GetAllowGroupExists(id) != true) { Console.WriteLine("群组不存在!"); return; }
 
             DB.DelAllowGroup(id);
             Console.WriteLine("主菜单 > 允许群组控制 > 删除成功!");
@@ -408,7 +420,7 @@ namespace RBQBot
         {
             Console.Write("请输入群组Id: ");
             var id = Convert.ToInt64(Console.ReadLine());
-            if (DB.GetAllowGroupExist(id) != true) { Console.WriteLine("群组不存在!"); return; }
+            if (DB.GetAllowGroupExists(id) != true) { Console.WriteLine("群组不存在!"); return; }
 
             var group = DB.GetAllowGroup(id);
 
@@ -702,7 +714,6 @@ namespace RBQBot
             Console.WriteLine("主菜单 > 口塞列表控制 > 设置成功!");
         }
         #endregion
-
 
         #endregion
 

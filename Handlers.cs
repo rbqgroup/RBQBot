@@ -2,6 +2,7 @@
 using RBQBot.Model;
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,872 @@ namespace RBQBot
 {
     public class Handlers
     {
+        /// <summary>[绒布球] 给自己带上了默认口塞! 咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!</summary>
+        public static readonly string[] defaultSelfLockMsg = { "咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!" };
+
+        /// <summary>[Ta] 帮 [绒布球] 带上了默认口塞! 顺便在 Ta 身上画了一个正字~</summary>
+        public static readonly string[] defaultLockMsg = { "顺便在 Ta 身上画了一个正字~" };
+
+        /// <summary>[Ta] 帮 [绒布球] 修好了口塞!\n顺便展示了钥匙并丢到了一边!</summary>
+        public static readonly string[] defaultEnhancedLockMsg = { "修好了口塞!\n顺便展示了钥匙并丢到了一边!" };
+
+        /// <summary>[绒布球] 挣脱了被人们安装的 超大号默认口塞! Ta感觉自己可以容纳更大的尺寸了呢!</summary>
+        public static readonly string[] defaultUnlockMsg = { "Ta感觉自己可以容纳更大的尺寸了呢!" };
+
+        #region 管理员命令封装
+        private static void AdminProcess(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 1)
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: Program.AdminTxt);
+            }
+            else
+            {
+                if (message.Chat.Type == ChatType.Private)
+                {
+                    switch (comm[1])
+                    {
+                        case "GetAllowGroup": GetAllowGroup(botClient, message); break;
+                        case "AddAllowGroup": AddAllowGroup(botClient, message); break;
+                        case "DelAllowGroup": DelAllowGroup(botClient, message); break;
+                        case "SetAllowGroup": SetAllowGroup(botClient, message); break;
+                        case "AddGagItem": AddGagItem(botClient, message); break;
+                        case "DelGagItem": DelGagItem(botClient, message); break;
+                        case "SetGagItem": SetGagItem(botClient, message); break;
+                        case "AddRBQPoint": AddRBQPoint(botClient, message); break;
+                        case "DelRBQPoint": DelRBQPoint(botClient, message); break;
+                        case "SetRBQPoint": SetRBQPoint(botClient, message); break;
+                        case "AddRBQLockCount":
+                        case "DelRBQLockCount":
+                        case "ClearLockCount":
+                        case "SetGag":
+                        case "ClearGagFrom":
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "该命令仅限群组内使用!");
+                            break;
+                        default:
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "未知命令, 请输入 /admin 查看命令!");
+                            break;
+                    }
+                }
+                else
+                {
+                    switch (comm[1])
+                    {
+                        case "GetAllowGroup":
+                        case "AddAllowGroup":
+                        case "DelAllowGroup":
+                        case "SetAllowGroup":
+                        case "AddGagItem":
+                        case "DelGagItem":
+                        case "SetGagItem":
+                        case "AddRBQPoint":
+                        case "DelRBQPoint":
+                        case "SetRBQPoint":
+                            botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "该命令仅限私聊使用!");
+                            break;
+                        case "AddRBQLockCount":
+                            if (message.ReplyToMessage != null && message.ReplyToMessage?.From.IsBot != true) AddRBQLockCount(botClient, message);
+                            else botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "请回复用户的消息使用本命令!");
+                            break;
+                        case "DelRBQLockCount":
+                            if (message.ReplyToMessage != null && message.ReplyToMessage?.From.IsBot != true) DelRBQLockCount(botClient, message);
+                            else botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "请回复用户的消息使用本命令!");
+                            break;
+                        case "ClearLockCount":
+                            if (message.ReplyToMessage != null && message.ReplyToMessage?.From.IsBot != true) ClearLockCount(botClient, message);
+                            else botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "请回复用户的消息使用本命令!");
+                            break;
+                        case "SetGag":
+                            if (message.ReplyToMessage != null && message.ReplyToMessage?.From.IsBot != true) SetGag(botClient, message);
+                            else botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "请回复用户的消息使用本命令!");
+                            break;
+                        case "ClearGagFrom":
+                            if (message.ReplyToMessage != null && message.ReplyToMessage?.From.IsBot != true) ClearGagFrom(botClient, message);
+                            else botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "请回复用户的消息使用本命令!");
+                            break;
+                        default:
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "未知命令, 请输入 /admin 查看命令!");
+                            break;
+                    }
+                }
+            }
+        }
+
+        #region 超管命令封装
+        private static void GetAllowGroup(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 3)
+            {
+                if (int.TryParse(comm[2], out int page)==true)
+                {
+                    var index = 0;
+                    var sb = new StringBuilder();
+
+                    var groups = Program.DB.GetAllowGroups();
+                    foreach (var i in groups)
+                    {
+                        try
+                        {
+                            var result = botClient.GetChatAsync(i.GroupId).Result;
+                            index++;
+                            sb.AppendLine($"群组Id: <code>{i.GroupId}</code> 群组名称: {result?.Title} @{result?.Username} 允许口塞: {i.AllowGag} 允许验证: {i.AllowVerify} 允许消息计数: {i.AllowMsgCount} 每日计数消息: {i.SamplyMsgCountStr}");
+                            if (index >= page)
+                            {
+                                index = 0;
+                                botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    replyToMessageId: message.MessageId,
+                                    disableNotification: true,
+                                    parseMode: ParseMode.Html,
+                                    text: sb.ToString());
+                                sb.Clear();
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            Program.DB.DelAllowGroup(i.GroupId);
+                            Console.WriteLine($"错误! 找不到群组Id为 {i.GroupId} 群组!已移除该群组!");
+                        }
+                    }
+                    botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    replyToMessageId: message.MessageId,
+                                    disableNotification: true,
+                                    parseMode: ParseMode.Html,
+                                    text: sb.ToString());
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数错误! 请重新输入!");
+                }
+            }
+            else
+            {
+                var index = 0;
+                var sb = new StringBuilder();
+
+                var groups = Program.DB.GetAllowGroups();
+                foreach (var i in groups)
+                {
+                    try
+                    {
+                        var result = botClient.GetChatAsync(i.GroupId).Result;
+                        index++;
+                        sb.AppendLine($"群组Id: <code>{i.GroupId}</code> 群组名称: {result?.Title} @{result?.Username} 允许口塞: {i.AllowGag} 允许验证: {i.AllowVerify} 允许消息计数: {i.AllowMsgCount} 每日计数消息: {i.SamplyMsgCountStr}");
+                        if (index >= 10)
+                        {
+                            index = 0;
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                parseMode: ParseMode.Html,
+                                text: sb.ToString());
+                            sb.Clear();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Program.DB.DelAllowGroup(i.GroupId);
+                        Console.WriteLine($"错误! 找不到群组Id为 {i.GroupId} 群组!已移除该群组!");
+                    }
+                }
+                botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                parseMode: ParseMode.Html,
+                                text: sb.ToString());
+            }
+        }
+
+        private static void AddAllowGroup(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 3)
+            {
+                if (long.TryParse(comm[2], out long id) == true)
+                {
+                    if (Program.DB.GetAllowGroupExists(id) != true)
+                    {
+                        Program.DB.AddAllowGroup(id);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "添加成功!");
+                    }
+                    else
+                    {
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "群组已存在!");
+                    }
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "参数错误! 请重新输入!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数错误! 请重新输入!");
+            }
+        }
+
+        private static void DelAllowGroup(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 3)
+            {
+                if (long.TryParse(comm[2], out long id) == true)
+                {
+                    if (Program.DB.GetAllowGroupExists(id) != true)
+                    {
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "群组不存在!");
+                    }
+                    else
+                    {
+                        Program.DB.DelAllowGroup(id);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "删除成功!");
+                    }
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "参数错误! 请重新输入!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数错误! 请重新输入!");
+            }
+        }
+
+        private static void SetAllowGroup(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 7)
+            {
+                if (long.TryParse(comm[2], out long id)==true&&bool.TryParse(comm[3], out bool gag)==true&&bool.TryParse(comm[4], out bool verify)==true&&bool.TryParse(comm[5], out bool msg)==true)
+                {
+                    if (Program.DB.GetAllowGroupExists(id) == true)
+                    {
+                        var group = Program.DB.GetAllowGroup(id);
+                        group.AllowGag = gag;
+                        group.AllowVerify = verify;
+                        group.AllowMsgCount = msg;
+                        group.SamplyMsgCountStr = comm[6];
+                        Program.DB.SetAllowGroup(group);
+
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "修改成功!");
+                    }
+                    else
+                    {
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "群组不存在!");
+                    }
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数错误! 请重新输入!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数不够! 请重新输入!");
+            }
+        }
+
+        private static void AddGagItem(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 3)
+            {
+                if (Program.DB.GetGagItemExist(comm[2]) != true)
+                {
+                    Program.DB.AddGagItem(comm[2], 1, 1, false, false, null, null, null, null);
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "添加成功!");
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "口塞已存在!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数错误! 请重新输入!");
+            } 
+        }
+
+        private static void DelGagItem(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 3)
+            {
+                if (Program.DB.GetGagItemExist(comm[2]) == true)
+                {
+                    Program.DB.DelGagItem(comm[2]);
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "删除成功!");
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "口塞不存在!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数错误! 请重新输入!");
+            }
+        }
+
+        private static void SetGagItem(ITelegramBotClient botClient, Message message)
+        {
+            var head = message.Text.IndexOf("SetGagItem") + 11;
+            var json = message.Text.Substring(head);
+
+            try
+            {
+                var obj = JsonSerializer.Deserialize<GagItem>(json, new JsonSerializerOptions { NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString | System.Text.Json.Serialization.JsonNumberHandling.WriteAsString });
+                if (Program.DB.GetGagItemExist(obj.Name) != true)
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "口塞不存在!");
+                }
+                else
+                {
+                    var gag = Program.DB.GetGagItemInfo(obj.Name);
+                    gag.LimitPoint = obj.LimitPoint;
+                    gag.UnLockCount = obj.UnLockCount;
+                    gag.SelfLockMsg = obj.SelfLockMsg == null ? defaultSelfLockMsg : obj.SelfLockMsg;
+                    gag.LockMsg = obj.LockMsg == null ? defaultLockMsg : obj.LockMsg;
+                    gag.EnhancedLockMsg = obj.EnhancedLockMsg == null ? defaultEnhancedLockMsg : obj.EnhancedLockMsg;
+                    gag.UnLockMsg = obj.UnLockMsg == null ? defaultUnlockMsg : obj.UnLockMsg;
+                    gag.ShowLimit = obj.ShowLimit;
+                    gag.ShowUnlock = obj.ShowUnlock;
+                    Program.DB.SetGagItem(gag);
+                    
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "修改成功!");
+                }
+            }
+            catch (Exception ex)
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "Json参数错误! 请重新输入!");
+            }
+        }
+
+        private static void AddRBQPoint(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 4)
+            {
+                if (long.TryParse(comm[2], out long uid) == true && int.TryParse(comm[3], out int point) == true)
+                {
+                    if (Program.DB.GetRBQExist(uid) != true)
+                    {
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "用户不存在!");
+                    }
+                    else
+                    {
+                        var user = Program.DB.GetRBQInfo(uid);
+                        user.RBQPoint += point;
+                        Program.DB.SetRBQInfo(user);
+
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "已增加绒度!");
+                    }
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "请输入正确的参数!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数不足! 请重新输入!");
+            }
+        }
+
+        private static void DelRBQPoint(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 4)
+            {
+                if (long.TryParse(comm[2], out long uid) == true && int.TryParse(comm[3], out int point) == true)
+                {
+                    if (Program.DB.GetRBQExist(uid) != true)
+                    {
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "用户不存在!");
+                    }
+                    else
+                    {
+                        var user = Program.DB.GetRBQInfo(uid);
+                        user.RBQPoint -= point;
+                        Program.DB.SetRBQInfo(user);
+
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "已减少绒度!");
+                    }
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "请输入正确的参数!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数不足! 请重新输入!");
+            }
+        }
+
+        private static void SetRBQPoint(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 4)
+            {
+                if (long.TryParse(comm[2], out long uid) == true && int.TryParse(comm[3], out int point) == true)
+                {
+                    if (Program.DB.GetRBQExist(uid) != true)
+                    {
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "用户不存在!");
+                    }
+                    else
+                    {
+                        var user = Program.DB.GetRBQInfo(uid);
+                        user.RBQPoint = point;
+                        Program.DB.SetRBQInfo(user);
+
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "已设置绒度!");
+                    }
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "请输入正确的参数!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数不足! 请重新输入!");
+            }
+        }
+        #endregion
+
+        #region 群管命令功能封装
+        private static void AddRBQLockCount(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length < 3)
+            {
+                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图增加 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数, 但管理员忘了输入数了!");
+            }
+            else
+            {
+                if (int.TryParse(comm[2], out int count) != false)
+                {
+                    var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
+
+                    if (rbq != null)
+                    {
+                        rbq.LockCount += count;
+                        Program.DB.SetRBQStatus(rbq);
+
+                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已增加 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数!");
+                    }
+                    else
+                    {
+                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图增加 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数, 但找不到该用户的状态!");
+                    }
+                }
+                else
+                {
+                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        disableNotification: true,
+                        parseMode: ParseMode.Html,
+                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图增加 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数, 但管理员输错数了!");
+                }
+            }
+        }
+
+        private static void DelRBQLockCount(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length < 3)
+            {
+                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图减少 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数, 但管理员忘了输入数了!");
+            }
+            else
+            {
+                if (int.TryParse(comm[2], out int count) != false)
+                {
+                    var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
+
+                    if (rbq != null)
+                    {
+                        if (rbq.LockCount-count <= 0)
+                        {
+                            if (Program.List.TryRemove(rbq.Id, out RBQList rbql) == true) rbql.Stop();
+                            rbq.LockCount = 0;
+                            Program.DB.SetRBQStatus(rbq);
+                        }
+                        else
+                        {
+                            rbq.LockCount -= count;
+                            Program.DB.SetRBQStatus(rbq);
+                        }
+
+                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已减少 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数!");
+                    }
+                    else
+                    {
+                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图减少 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数, 但找不到该用户的状态!");
+                    }
+                }
+                else
+                {
+                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        disableNotification: true,
+                        parseMode: ParseMode.Html,
+                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图减少 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数, 但管理员输错数了!");
+                }
+            }
+        }
+
+        private static void ClearLockCount(ITelegramBotClient botClient, Message message)
+        {
+            var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
+            if (rbq != null)
+            {
+                if (Program.List.TryRemove(rbq.Id, out RBQList rbql) != false) rbql.Stop();
+
+                rbq.LockCount = 0;
+                Program.DB.SetRBQStatus(rbq);
+
+                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已清除 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数!");
+            }
+            else
+            {
+                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图清除 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的挣脱次数, 但找不到该用户的状态!");
+            }
+        }
+
+        private static void SetGag(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length < 3)
+            {
+                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图设置 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的口塞, 但口塞不存在!");
+            }
+            else
+            {
+                if (Program.DB.GetGagItemExist(comm[2]) != true)
+                {
+                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        disableNotification: true,
+                        parseMode: ParseMode.Html,
+                        text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图设置 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的口塞, 但口塞不存在!");
+                }
+                else
+                {
+                    var gag = Program.DB.GetGagItemInfo(comm[2]);
+                    var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
+                    if (rbq != null)
+                    {
+                        var tm = DateTime.UtcNow.AddHours(8);
+
+                        rbq.FromId = new long[] { rbq.RBQId };
+                        rbq.StartLockTime = tm.Ticks;
+                        rbq.LockCount = gag.UnLockCount;
+                        rbq.GagId = gag.Id;
+                        Program.DB.SetRBQStatus(rbq);
+
+                        #region 内存队列存在检查
+                        if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
+                        {
+                            var timeout = (tm.AddMinutes(Program.LockTime) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+                            var rbqx = new RBQList(rbq.Id, rbq.LockCount, rbq.GagId, timeout);
+                            Program.List.TryAdd(rbq.Id, rbqx);
+                        }
+                        else
+                        {
+                            rbqItem.Stop();
+                            rbqItem.Id = rbq.Id;
+                            rbqItem.GagId = rbq.GagId;
+                            rbqItem.StartLockTime = rbq.StartLockTime;
+                            rbqItem.LockCount = rbq.LockCount;
+                            rbqItem.ResetTimer();
+                            Program.List.TryAdd(rbq.Id, rbqItem);
+                        }
+                        #endregion
+
+                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已将 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的口塞设置为 {gag.Name}!");
+                    }
+                    else
+                    {
+                        botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            disableNotification: true,
+                            parseMode : ParseMode.Html,
+                            text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图设置 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的口塞, 但找不到该用户的状态!");
+                    }
+                }
+            }
+        }
+
+        private static void ClearGagFrom(ITelegramBotClient botClient, Message message)
+        {
+            var rbq =Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
+            if (rbq != null)
+            {
+                rbq.FromId = new long[0];
+                Program.DB.SetRBQStatus(rbq);
+
+                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 已清除 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的所有口塞添加/加固者!");
+            }
+            else
+            {
+                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    disableNotification: true,
+                    parseMode: ParseMode.Html,
+                    text: $"管理员 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图清除 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> 的所有口塞添加/加固者, 但找不到该用户的状态!");
+            }
+        }
+        #endregion
+
+        #endregion
+
         #region 通用功能
         public static void MessageCountProcess(Message message)
         {
@@ -29,10 +896,12 @@ namespace RBQBot
         }
 
 
-        public static void DelayDeleteMessage(ITelegramBotClient botClient, long chatId, int msgId, int delay)
+        public static void DelayDeleteMessage(ITelegramBotClient botClient, long chatId, int msgId, int delayms)
         {
-            Thread.Sleep(delay);
-            botClient.DeleteMessageAsync(chatId, msgId);
+            ThreadPool.QueueUserWorkItem( o => {
+                Thread.Sleep(delayms);
+                botClient.DeleteMessageAsync(chatId, msgId);
+            });
         }
 
         /// <summary>消息合规检查</summary>
@@ -152,13 +1021,13 @@ namespace RBQBot
             var count = Program.DB.GetGagItemCount();
             var gag = Program.DB.GetAllGagItems();
             var sb = new StringBuilder();
-            sb.AppendLine($"一共有 {count} 个口塞. (点击蓝色字体即可复制)");
+            sb.AppendLine($"一共有 {count} 个口塞. (点击<b><u>名字</u></b>即可复制)");
             foreach (var i in gag)
             {
                 var limit = i.ShowLimit ? i.LimitPoint.ToString() : "未知";
                 var unlock = i.ShowUnlock ? i.UnLockCount.ToString() : "未知";
 
-                sb.AppendLine($"<code>{i.Name}</code> 要求绒度 「{limit}」 挣扎次数 「{unlock}」");
+                sb.AppendLine($"<code>{i.Name}</code> 要求绒度 「{limit}」 挣脱次数 「{unlock}」");
             }
             return sb.ToString();
         }
@@ -234,7 +1103,7 @@ namespace RBQBot
             if (message.Chat.Type == ChatType.Private) allow = "您拥有管理权限";
             else
             {
-                if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true) allow = "具有使用许可权";
+                if (Program.DB.GetAllowGroupExists(message.Chat.Id) == true) allow = "具有使用许可权";
                 else allow = "不具有使用许可权";
             }
 
@@ -269,27 +1138,6 @@ namespace RBQBot
         #endregion
 
         #region 私聊Bot命令功能封装
-        public static void Debug(ITelegramBotClient botClient, Message message)
-        {
-            if (Program.IsDebug == true && message.From.Id == Program.DebugUserId)
-            {
-                Program.IsDebug = false;
-                botClient.SendTextMessageAsync(
-                    chatId: message.Chat.Id,
-                    replyToMessageId: message.MessageId,
-                    disableNotification: true,
-                    text: "调试功能已关闭.");
-            }
-            else if (Program.IsDebug == false && message.From.Id == Program.DebugUserId)
-            {
-                Program.IsDebug = true;
-                botClient.SendTextMessageAsync(
-                    chatId: message.Chat.Id,
-                    replyToMessageId: message.MessageId,
-                    disableNotification: true,
-                    text: "调试功能已开启,您现在可以转发任意消息给这个Bot来查看消息的数据.");
-            }
-        }
 
         private static void GetRBQPoint(ITelegramBotClient botClient, Message message)
         {
@@ -690,63 +1538,21 @@ namespace RBQBot
                     }
                     else
                     {
-                        var gag = Program.DB.GetGagItemInfo(comm[1]);
-
-                        #region 是管理 绕过绒度限制
-                        if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id) == true) // is true
+                        if (Program.DB.GetRBQLockCount(message.Chat.Id, message.From.Id) > 0)
                         {
-                            Program.DB.AddRBQFroms(message.Chat.Id, message.From.Id, message.From.Id);
-
-                            var R = new Random();
-                            var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.From.Id);
-                            var tm = DateTime.UtcNow.AddHours(8);
-
-                            rbq.StartLockTime = tm.Ticks;
-                            rbq.LockCount = gag.UnLockCount;
-                            rbq.GagId = gag.Id;
-                            Program.DB.SetRBQStatus(rbq);
-
-                            var msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
-
-                            #region 内存队列存在检查
-                            if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
-                            {
-                                var timeout = (tm.AddMinutes(Program.LockTime) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
-                                var rbqx = new RBQList(rbq.Id, rbq.LockCount, rbq.GagId, timeout);
-                                Program.List.TryAdd(rbq.Id, rbqx);
-                            }
-                            else
-                            {
-                                rbqItem.Stop();
-                                rbqItem.Id = rbq.Id;
-                                rbqItem.GagId = gag.Id;
-                                rbqItem.StartLockTime = tm.Ticks;
-                                rbqItem.LockCount = gag.UnLockCount;
-                                rbqItem.ResetTimer();
-                                Program.List.TryAdd(rbq.Id, rbqItem);
-                            }
-                            #endregion
-
                             botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
                             botClient.SendTextMessageAsync(
                                 chatId: message.Chat.Id,
                                 disableNotification: true,
-                                parseMode: ParseMode.Html,
-                                text: msg);
+                                parseMode : ParseMode.Html,
+                                text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 还未完全挣脱口塞就已经渴望新的口塞了!");
                         }
-                        #endregion
                         else
                         {
-                            if (Program.DB.GetRBQPoint(message.From.Id) < gag.LimitPoint)
-                            {
-                                botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                                botClient.SendTextMessageAsync(
-                                    chatId: message.Chat.Id,
-                                    disableNotification: true,
-                                    parseMode: ParseMode.Html,
-                                    text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 的绒度不够使用 <code>{gag.Name}</code>!");
-                            }
-                            else
+                            var gag = Program.DB.GetGagItemInfo(comm[1]);
+
+                            #region 是管理 绕过绒度限制
+                            if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id) == true) // is true
                             {
                                 Program.DB.AddRBQFroms(message.Chat.Id, message.From.Id, message.From.Id);
 
@@ -786,6 +1592,60 @@ namespace RBQBot
                                     disableNotification: true,
                                     parseMode: ParseMode.Html,
                                     text: msg);
+                            }
+                            #endregion
+                            else
+                            {
+                                if (Program.DB.GetRBQPoint(message.From.Id) < gag.LimitPoint)
+                                {
+                                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                                    botClient.SendTextMessageAsync(
+                                        chatId: message.Chat.Id,
+                                        disableNotification: true,
+                                        parseMode: ParseMode.Html,
+                                        text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 的绒度不够使用 <code>{gag.Name}</code>!");
+                                }
+                                else
+                                {
+                                    Program.DB.AddRBQFroms(message.Chat.Id, message.From.Id, message.From.Id);
+
+                                    var R = new Random();
+                                    var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.From.Id);
+                                    var tm = DateTime.UtcNow.AddHours(8);
+
+                                    rbq.StartLockTime = tm.Ticks;
+                                    rbq.LockCount = gag.UnLockCount;
+                                    rbq.GagId = gag.Id;
+                                    Program.DB.SetRBQStatus(rbq);
+
+                                    var msg = $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 给自己带上了 <code>{comm[1]}</code>!\n{gag.SelfLockMsg[R.Next(0, gag.SelfLockMsg.Length)]}";
+
+                                    #region 内存队列存在检查
+                                    if (Program.List.TryRemove(rbq.Id, out RBQList rbqItem) == false)
+                                    {
+                                        var timeout = (tm.AddMinutes(Program.LockTime) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+                                        var rbqx = new RBQList(rbq.Id, rbq.LockCount, rbq.GagId, timeout);
+                                        Program.List.TryAdd(rbq.Id, rbqx);
+                                    }
+                                    else
+                                    {
+                                        rbqItem.Stop();
+                                        rbqItem.Id = rbq.Id;
+                                        rbqItem.GagId = gag.Id;
+                                        rbqItem.StartLockTime = tm.Ticks;
+                                        rbqItem.LockCount = gag.UnLockCount;
+                                        rbqItem.ResetTimer();
+                                        Program.List.TryAdd(rbq.Id, rbqItem);
+                                    }
+                                    #endregion
+
+                                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                                    botClient.SendTextMessageAsync(
+                                        chatId: message.Chat.Id,
+                                        disableNotification: true,
+                                        parseMode: ParseMode.Html,
+                                        text: msg);
+                                }
                             }
                         }
                     }
@@ -893,7 +1753,7 @@ namespace RBQBot
         {
             var handler = update.Type switch
             {
-                #region Unused Message Type Process
+                #region 未被使用的消息拦截器
                 // UpdateType.Unknown:
                 // UpdateType.ChannelPost:
                 // UpdateType.EditedChannelPost:
@@ -924,50 +1784,6 @@ namespace RBQBot
         /// <summary>内联查询处理(就是直接输入@Bot名 空格后返回的按钮/功能)</summary>
         private static async Task BotOnInlineQueryReceived(ITelegramBotClient botClient, InlineQuery inlineQuery)
         {
-            #region OldCode
-            //Program.DB.SetRBQInfo(inlineQuery.From.Id, 0, true);
-
-            //var rbq = Program.DB.GetRBQInfo(inlineQuery.From.Id);
-            //if (rbq != null)
-            //{
-            //    if (inlineQuery.From.IsBot == false && (inlineQuery.ChatType == ChatType.Supergroup || inlineQuery.ChatType == ChatType.Group) == true  && rbq.FastInline == true)
-            //    {
-            //        //显示的结果集合
-            //        InlineQueryResult[] results = {
-            //        new InlineQueryResultArticle(
-            //            id: "0", // 这个结果的唯一标识符 id
-            //            title: "说绒话",
-            //            inputMessageContent: new InputTextMessageContent("这是一条测试消息"))};
-
-            //        botClient.AnswerInlineQueryAsync(
-            //            inlineQueryId: inlineQuery.Id,
-            //            results: results,
-            //            isPersonal: true, // 必须为 true,不然三个个人同时查询结果会变成同一个
-            //            cacheTime: 0); // 返回的inline查询结果在服务器最长保存时间（单位：秒），默认300秒
-            //    }
-            //    else
-            //    {
-            //        InlineQueryResult[] results = { };
-
-            //        botClient.AnswerInlineQueryAsync(
-            //            inlineQueryId: inlineQuery.Id,
-            //            results: results,
-            //            isPersonal: true,
-            //            cacheTime: 0);
-            //    }
-            //}
-            //else
-            //{
-            //    InlineQueryResult[] results = { };
-
-            //    botClient.AnswerInlineQueryAsync(
-            //        inlineQueryId: inlineQuery.Id,
-            //        results: results,
-            //        isPersonal: true,
-            //        cacheTime: 0);
-            //}
-            #endregion
-
             if (inlineQuery.From.IsBot == false)
             {
                 // 显示的结果集合 // 这里不能返回空消息,不然必定不显示
@@ -978,7 +1794,7 @@ namespace RBQBot
                         inputMessageContent: new InputTextMessageContent(GetRBQSay())),
                     new InlineQueryResultArticle(
                         id: "1", // 这个结果的唯一标识符 id
-                        title: "查挣扎次数",
+                        title: "查挣脱次数",
                         inputMessageContent: new InputTextMessageContent("/count")),
                     new InlineQueryResultArticle(
                         id: "2",
@@ -1050,7 +1866,7 @@ namespace RBQBot
                             chatId: wait2.ChatId,
                             disableNotification: true,
                             parseMode: ParseMode.Html,
-                            text: $"欢迎 <a href=\"tg://user?id={wait2.UserId}\">{result.User?.FirstName} {result.User?.LastName}</a> 加入!");
+                            text: $"欢迎 <a href=\"tg://user?id={wait2.UserId}\"><b><u>{result.User?.FirstName} {result.User?.LastName}</u></b></a> 加入!");
                     }
                     break;
                 case "adminverify":
@@ -1081,7 +1897,7 @@ namespace RBQBot
                                 chatId: wait3.ChatId,
                                 disableNotification: true,
                                 parseMode: ParseMode.Html,
-                                text: $"欢迎管理员批准的 <a href=\"tg://user?id={wait3.UserId}\">{result.User?.FirstName} {result.User?.LastName}</a> 加入!");
+                                text: $"欢迎管理员批准的 <a href=\"tg://user?id={wait3.UserId}\"><b><u>{result.User?.FirstName} {result.User?.LastName}</u></b></a> 加入!");
                         }
                         else botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "参数错误!可能用户已验证!", false, null, 30);
                     }
@@ -1127,199 +1943,78 @@ namespace RBQBot
 #if DEBUG
             Console.WriteLine($"RecvMSG! MsgType: {message.Type} | MsgId: {message.MessageId}\r\nChatType: {message.Chat.Type} | ChatId: {message.Chat.Id} | ChatTitle: {message.Chat.Title}");
 #endif
-            if (Program.IsDebug == true && message.From.Id == Program.DebugUserId) DebugProcess(botClient, message);
-            else
+            if (message.From.IsBot == false)
             {
-                if (message.From.IsBot == false)
+                switch (message.Type)
                 {
-                    switch (message.Type)
-                    {
-                        case MessageType.Text:
-                            switch (message.Chat.Type)
-                            {
-                                case ChatType.Private:
-                                    PrivateMsgProcess(botClient, message);
-                                    break;
-                                case ChatType.Group:
-                                case ChatType.Supergroup:
-                                    MessageProcess(botClient, message);
-                                    MessageCountProcess(message);
-                                    break;
-                                default:
-                                    break;
-                            }
-                            break;
-                        case MessageType.ChatMembersAdded: // Bot & User 加入了群组
-                            if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true) ChatMembersAdded(botClient, message);
-                            break;
-                        case MessageType.ChatMemberLeft: // Bot & User 离开了群组
-                            if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true) ChatMemberLeft(botClient, message);
-                            break;
+                    case MessageType.Text:
+                        switch (message.Chat.Type)
+                        {
+                            case ChatType.Private:
+                                PrivateMsgProcess(botClient, message);
+                                break;
+                            case ChatType.Group:
+                            case ChatType.Supergroup:
+                                MessageProcess(botClient, message);
+                                MessageCountProcess(message);
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case MessageType.ChatMembersAdded: // Bot & User 加入了群组
+                        if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true) ChatMembersAdded(botClient, message);
+                        break;
+                    case MessageType.ChatMemberLeft: // Bot & User 离开了群组
+                        if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true) ChatMemberLeft(botClient, message);
+                        break;
 
-                        #region 不使用/拦截的消息类型
-                        //case MessageType.Photo:
-                        //case MessageType.Audio:
-                        //case MessageType.Video:
-                        //case MessageType.Voice:
-                        //case MessageType.Document:
-                        //case MessageType.Sticker:
-                        //case MessageType.Location:
-                        //case MessageType.Contact:
-                        //case MessageType.Venue:
-                        //case MessageType.Game:
-                        //case MessageType.VideoNote:
-                        //case MessageType.Invoice:
-                        //case MessageType.SuccessfulPayment:
-                        //case MessageType.WebsiteConnected:
-                        //case MessageType.ChatTitleChanged:
-                        //case MessageType.ChatPhotoChanged:
-                        //case MessageType.MessagePinned:
-                        //case MessageType.ChatPhotoDeleted:
-                        //case MessageType.GroupCreated:
-                        //case MessageType.SupergroupCreated:
-                        //case MessageType.ChannelCreated:
-                        //case MessageType.MigratedToSupergroup:
-                        //case MessageType.MigratedFromGroup:
-                        //case MessageType.Poll:
-                        //case MessageType.Dice:
-                        //case MessageType.MessageAutoDeleteTimerChanged:
-                        //case MessageType.ProximityAlertTriggered:
-                        //case MessageType.VoiceChatScheduled:
-                        //case MessageType.VoiceChatStarted:
-                        //case MessageType.VoiceChatEnded:
-                        //case MessageType.VoiceChatParticipantsInvited:
-                        //case MessageType.Document:
-                        //case MessageType.MigratedToSupergroup: // 用户权限被提升?
-                        //case MessageType.Unknown:
-                        #endregion
-
-                        case MessageType.Sticker:
-                            StickerProcess(botClient, message);
-                            MessageCountProcess(message);
-                            break;
-                        default:
-                            Console.WriteLine($"收到未处理的消息 消息类型: {message.Chat.Type} 消息内容: {message?.Text} 消息来源: {message.From?.Id} @{message.From?.Username} {message.From?.FirstName} {message.From?.LastName}");
-                            break;
-                    }
-                    #region Old Command Switch
-                    //Console.WriteLine($"Receive message type: {message.Type}");
-                    //if (message.Type != MessageType.Text)
-                    //    return;
-
-                    //var action = message.Text!.Split(' ')[0] switch
-                    //{
-                    //    "/gag help" => SendInlineKeyboard(botClient, message),
-                    //    "/keyboard" => SendReplyKeyboard(botClient, message),
-                    //    "/remove" => RemoveKeyboard(botClient, message),
-                    //    "/photo" => SendFile(botClient, message),
-                    //    "/request" => RequestContactAndLocation(botClient, message),
-                    //    _ => Usage(botClient, message)
-                    //};
-                    //Message sentMessage = await action;
-                    //Console.WriteLine($"The message was sent with id: {sentMessage.MessageId}");
+                    #region 不使用/拦截的消息类型
+                    //case MessageType.Photo:
+                    //case MessageType.Audio:
+                    //case MessageType.Video:
+                    //case MessageType.Voice:
+                    //case MessageType.Document:
+                    //case MessageType.Sticker:
+                    //case MessageType.Location:
+                    //case MessageType.Contact:
+                    //case MessageType.Venue:
+                    //case MessageType.Game:
+                    //case MessageType.VideoNote:
+                    //case MessageType.Invoice:
+                    //case MessageType.SuccessfulPayment:
+                    //case MessageType.WebsiteConnected:
+                    //case MessageType.ChatTitleChanged:
+                    //case MessageType.ChatPhotoChanged:
+                    //case MessageType.MessagePinned:
+                    //case MessageType.ChatPhotoDeleted:
+                    //case MessageType.GroupCreated:
+                    //case MessageType.SupergroupCreated:
+                    //case MessageType.ChannelCreated:
+                    //case MessageType.MigratedToSupergroup:
+                    //case MessageType.MigratedFromGroup:
+                    //case MessageType.Poll:
+                    //case MessageType.Dice:
+                    //case MessageType.MessageAutoDeleteTimerChanged:
+                    //case MessageType.ProximityAlertTriggered:
+                    //case MessageType.VoiceChatScheduled:
+                    //case MessageType.VoiceChatStarted:
+                    //case MessageType.VoiceChatEnded:
+                    //case MessageType.VoiceChatParticipantsInvited:
+                    //case MessageType.Document:
+                    //case MessageType.MigratedToSupergroup: // 用户权限被提升?
+                    //case MessageType.Unknown:
                     #endregion
+
+                    case MessageType.Sticker:
+                        StickerProcess(botClient, message);
+                        MessageCountProcess(message);
+                        break;
+                    default:
+                        Console.WriteLine($"收到未处理的消息 消息类型: {message.Chat.Type} 消息内容: {message?.Text} 消息来源: {message.From?.Id} @{message.From?.Username} {message.From?.FirstName} {message.From?.LastName}");
+                        break;
                 }
             }
-
-            #region Demo Code
-            // Send inline keyboard
-            // You can process responses in BotOnCallbackQueryReceived handler
-            //static async Task<Message> SendInlineKeyboard(ITelegramBotClient botClient, Message message)
-            //{
-            //    await botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
-
-            //    // Simulate longer running task
-            //    await Task.Delay(500);
-
-            //    InlineKeyboardMarkup inlineKeyboard = new(
-            //        new[]
-            //        {
-            //        // first row
-            //        new []
-            //        {
-            //            InlineKeyboardButton.WithCallbackData("1.1", "11"),
-            //            InlineKeyboardButton.WithCallbackData("1.2", "12"),
-            //        },
-            //        // second row
-            //        new []
-            //        {
-            //            InlineKeyboardButton.WithCallbackData("2.1", "21"),
-            //            InlineKeyboardButton.WithCallbackData("2.2", "22"),
-            //        },
-            //        });
-
-            //    return await botClient.SendTextMessageAsync(chatId: message.Chat.Id,
-            //                                                text: "Choose",
-            //                                                replyMarkup: inlineKeyboard);
-            //}
-
-            //static async Task<Message> SendReplyKeyboard(ITelegramBotClient botClient, Message message)
-            //{
-            //    ReplyKeyboardMarkup replyKeyboardMarkup = new(
-            //        new[]
-            //        {
-            //            new KeyboardButton[] { "1.1", "1.2" },
-            //            new KeyboardButton[] { "2.1", "2.2" },
-            //        })
-            //    {
-            //        ResizeKeyboard = true
-            //    };
-
-            //    return await botClient.SendTextMessageAsync(chatId: message.Chat.Id,
-            //                                                text: "Choose",
-            //                                                replyMarkup: replyKeyboardMarkup);
-            //}
-
-            //static async Task<Message> RemoveKeyboard(ITelegramBotClient botClient, Message message)
-            //{
-            //    return await botClient.SendTextMessageAsync(chatId: message.Chat.Id,
-            //                                                text: "Removing keyboard",
-            //                                                replyMarkup: new ReplyKeyboardRemove());
-            //}
-
-            //static async Task<Message> SendFile(ITelegramBotClient botClient, Message message)
-            //{
-            //    await botClient.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
-
-            //    const string filePath = @"Files/tux.png";
-            //    using FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            //    var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
-
-            //    return await botClient.SendPhotoAsync(chatId: message.Chat.Id,
-            //                                          photo: new InputOnlineFile(fileStream, fileName),
-            //                                          caption: "Nice Picture");
-            //}
-
-            //static async Task<Message> RequestContactAndLocation(ITelegramBotClient botClient, Message message)
-            //{
-            //    ReplyKeyboardMarkup RequestReplyKeyboard = new(
-            //        new[]
-            //        {
-            //        KeyboardButton.WithRequestLocation("Location"),
-            //        KeyboardButton.WithRequestContact("Contact"),
-            //        });
-
-            //    return await botClient.SendTextMessageAsync(chatId: message.Chat.Id,
-            //                                                text: "Who or Where are you?",
-            //                                                replyMarkup: RequestReplyKeyboard);
-            //}
-
-            //static async Task<Message> Usage(ITelegramBotClient botClient, Message message)
-            //{
-            //    const string usage = "使用帮助:\n" +
-            //                         "/gag help - 显示此帮助.\n" +
-            //                         "/gag 口塞名称 - 给回复的用户「佩戴」口塞, 如果对方已经佩戴口塞, 则「加固」对方的口塞.\n" +
-            //                         "/gag @username 口塞名称 - 给@username用户「佩戴」口塞, 如果对方已经佩戴口塞, 则「加固」对方的口塞.\n" +
-            //                         "/gag on - 允许任何人给自己「佩戴」口塞, 为了方式骚扰默认是不允许的.\n" +
-            //                         "/gag off - 不允许其他人给自己「佩戴」口塞, 如果已经处于「佩戴」状态, 不会影响当前已经「佩戴」中的口塞." +
-            //                         "/rbqpoint - 查询自己的「绒度」.\n" +
-            //                         "/rbqpoint @username - 查询@username的「绒度」.";
-
-            //    return await botClient.SendTextMessageAsync(chatId: message.Chat.Id,
-            //                                                text: usage,
-            //                                                replyMarkup: new ReplyKeyboardRemove());
-            //}
-            #endregion
         }
 
         /// <summary>群组加入了新人的处理</summary>
@@ -1363,7 +2058,7 @@ namespace RBQBot
                         disableNotification: true,
                         parseMode: ParseMode.Html,
                         replyMarkup: inlineKeyboard,
-                        text: $"欢迎 <a href=\"tg://user?id={message.From.Id}\">{message.NewChatMembers[i].FirstName} {message.NewChatMembers[i]?.LastName}</a> 加入!\n请发送 「<code>/verify 我很可爱</code>」 或点击下面的按钮来完成加群验证(点击可复制),否则您将会在120秒后被移出群组.").Result;
+                        text: $"欢迎 <a href=\"tg://user?id={message.From.Id}\"><b><u>{message.NewChatMembers[i].FirstName} {message.NewChatMembers[i]?.LastName}</u></b></a> 加入!\n请发送 「<code>/verify 我很可爱</code>」 或点击下面的按钮来完成加群验证(点击可复制),否则您将会在120秒后被移出群组.").Result;
 
                     var b = new WaitBan(message.Chat.Id, message.NewChatMembers[i].Id, result.MessageId, Program.UserVerifyTime, botClient);
                     Program.BanList.TryAdd(message.NewChatMembers[i].Id, b);
@@ -1400,7 +2095,7 @@ namespace RBQBot
                     chatId: message.Chat.Id,
                     disableNotification: true,
                     parseMode: ParseMode.Html,
-                    text: $"<a href=\"tg://user?id={message.LeftChatMember.Id}\">{message.LeftChatMember.FirstName} {message.LeftChatMember?.LastName}</a> 离开了群组.");
+                    text: $"<a href=\"tg://user?id={message.LeftChatMember.Id}\"><b><u>{message.LeftChatMember.FirstName} {message.LeftChatMember?.LastName}</u></b></a> 离开了群组.");
             }
             else
             {
@@ -1414,7 +2109,7 @@ namespace RBQBot
                 }
                 else
                 {
-                    Console.WriteLine($"本Bot被 UserId:{message.From.Id} {message.From?.Username} <b><u>{message.From.FirstName} {message.From?.LastName}</u></b> 丢出 GroupId:{message.Chat.Id} {message.Chat?.Username} {message.Chat?.Title}");
+                    Console.WriteLine($"本 Bot被 UserId:{message.From.Id} {message.From?.Username} <b><u>{message.From.FirstName} {message.From?.LastName}</u></b> 丢出 GroupId:{message.Chat.Id} {message.Chat?.Username} {message.Chat?.Title}");
                 }
             }
         }
@@ -1422,7 +2117,8 @@ namespace RBQBot
         /// <summary>私聊Bot的处理</summary>
         private static void PrivateMsgProcess(ITelegramBotClient botClient, Message message)
         {
-            switch (message.Text.ToLower())
+            var comm = message.Text.ToLower().Split(' ');
+            switch (comm[0])
             {
                 case "/start":
                     botClient.SendTextMessageAsync(
@@ -1457,15 +2153,29 @@ namespace RBQBot
                         text: GetAllGag());
                     break;
                 case "/ping":
-                    if (message.From.Id == Program.DebugUserId) PingProcess(botClient, message);
+                    if (message.From.Id == Program.DebugUserId || message.From.Id == Program.AdminId) PingProcess(botClient, message);
                     else botClient.SendTextMessageAsync(
                             chatId: message.Chat.Id,
                             replyToMessageId: message.MessageId,
                             disableNotification: true,
-                            parseMode: ParseMode.Html,
                             text: "您不是管理员,不能使用此命令");
                     break;
                 case "/verify":
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "本命令只能在群内使用!");
+                    break;
+                case "/getid":
+                    botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                parseMode: ParseMode.Html,
+                                text: $"您的用户Id: <code>{message.From.Id}</code>");
+                    break;
+                case "/getgid":
                     botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
                         replyToMessageId: message.MessageId,
@@ -1485,15 +2195,43 @@ namespace RBQBot
                         disableNotification: true,
                         text: Program.PrivacyTxt);
                     break;
-                case "/debug":
-                    Debug(botClient, message);
+                case "/admin":
+                    if (message.From.Id == Program.DebugUserId || message.From.Id == Program.AdminId) AdminProcess(botClient, message);
+                    else botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            text: "您不是管理员,不能使用此命令");
                     break;
                 default:
-                    botClient.SendTextMessageAsync(
+                    if (message.ForwardDate != null)
+                    {
+                        if (message.ForwardFrom != null)
+                        {
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                parseMode : ParseMode.Html,
+                                text: $"用户Id: <code>{message.ForwardFrom?.Id}</code>");
+                        }
+                        else
+                        {
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "无法获取这条消息的用户Id!");
+                        }
+                    }
+                    else
+                    {
+                        botClient.SendTextMessageAsync(
                         chatId: message.Chat.Id,
                         replyToMessageId: message.MessageId,
                         disableNotification: true,
                         text: "命令错误! 请输入 /help 查看命令!");
+                    }
                     break;
             }
         }
@@ -1505,7 +2243,7 @@ namespace RBQBot
             if (Program.DB.GetAllowGroupExist(message.Chat.Id) != true) Program.DB.AddAllowGroup(message.Chat.Id);
 #endif
 
-            if (Program.DB.GetAllowGroupExist(message.Chat.Id)) // 消息进入
+            if (Program.DB.GetAllowGroupExists(message.Chat.Id)) // 消息进入
             {
                 #region 进群验证
                 if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowVerify) == true)
@@ -1599,7 +2337,7 @@ namespace RBQBot
                             {
                                 #region 输入不规范的绒布球处理
                                 if (TypeProcess(message.Text) > 0) // 不合规
-                                { // 如果不符合要求删除消息并嘲讽
+                                { // 如果不符合要求删除消息并提示
                                     var R = new Random();
                                     if (R.Next(0, 100) >= 70)
                                     {
@@ -1623,7 +2361,7 @@ namespace RBQBot
                                             chatId: message.Chat.Id,
                                             disableNotification: true,
                                             parseMode: ParseMode.Html,
-                                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣扎的次数");
+                                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图逃脱口塞的限制!\n作为惩罚我们增加了1点它需要挣脱的次数");
                                     }
                                     else
                                     {
@@ -1638,7 +2376,7 @@ namespace RBQBot
                                 #endregion
 
                                 #region 输入规范的绒布球处理
-                                else // 合规 并进行挣扎计数-1 并重置时间
+                                else // 合规 并进行挣脱计数-1 并重置时间
                                 {
                                     if (rbq.LockCount-1 == 0)
                                     {
@@ -1678,6 +2416,7 @@ namespace RBQBot
                                             Program.List.TryAdd(rbq.Id, rbqI);
                                         }
                                     }
+                                    DelayDeleteMessage(botClient, message.Chat.Id, message.MessageId, 3000);
                                 }
                                 #endregion
                             }
@@ -1696,12 +2435,21 @@ namespace RBQBot
         private static async void CommandProcess(ITelegramBotClient botClient, Message message)
         {
             string[] comm = new string[] { };
+#if DEBUG
+            if (message.Text.ToLower().IndexOf("@rbqexbot") > 0)
+            {
+                var len = message.Text.ToLower().IndexOf("@rbqexbot");
+                comm = message.Text.Substring(0, len).ToLower().Split(' ');
+            }
+            else comm = message.Text.ToLower().Split(' ');
+#else
             if (message.Text.ToLower().IndexOf("@rbq_ch_bot") > 0)
             {
                 var len = message.Text.ToLower().IndexOf("@rbq_ch_bot");
                 comm = message.Text.Substring(0, len).ToLower().Split(' ');
             }
             else comm = message.Text.ToLower().Split(' ');
+#endif
 
             switch (comm[0])
             {
@@ -1741,6 +2489,41 @@ namespace RBQBot
                             parseMode: ParseMode.Html,
                             text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 试图使用验证命令, 但此命令只允许加入时的用户使用!");
                     break;
+                case "/getid":
+                    botClient.DeleteMessageAsync(message.Chat.Id, message.MessageId);
+                    if (message.ReplyToMessage != null)
+                    {
+                        botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 请求获取 <a href=\"tg://user?id={message.ReplyToMessage.From.Id}\"><b><u>{message.ReplyToMessage.From.FirstName} {message.ReplyToMessage?.From.LastName}</u></b></a> Id: <code>{message.ReplyToMessage.From.Id}</code>");
+                    }
+                    else
+                    {
+                        botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        disableNotification: true,
+                        parseMode: ParseMode.Html,
+                        text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> Id: <code>{message.From.Id}</code>");
+                    }
+                    break;
+                case "/getgid":
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        disableNotification: true,
+                        parseMode: ParseMode.Html,
+                        text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 请求获取当前群组 Id: <code>{message.Chat.Id}</code>");
+                    break;
+                case "/admin":
+                    if (CheckIsAdmin(botClient, message.Chat.Id, message.From.Id)) AdminProcess(botClient, message);
+                    else botClient.SendTextMessageAsync(
+                            chatId: message.Chat.Id,
+                            replyToMessageId: message.MessageId,
+                            disableNotification: true,
+                            parseMode: ParseMode.Html,
+                            text: $"<a href=\"tg://user?id={message.From.Id}\"><b><u>{message.From.FirstName} {message.From?.LastName}</u></b></a> 不是管理员, 不能使用此命令!");
+                    break;
                 case "/help":
                     Help(botClient, message);
                     break;
@@ -1754,34 +2537,8 @@ namespace RBQBot
                         disableNotification: true,
                         text: Program.PrivacyTxt);
                     break;
-#if DEBUG
-                case "/test1":
-                    Program.MsgCountTm_Elapsed(null, null);
-                    break;
-                //case "/test2":
-                    //InlineKeyboardMarkup inlineKeyboard = new(new[] {
-                    //    new [] {
-                    //        InlineKeyboardButton.WithCallbackData(text: "我不可爱,别验证我", callbackData: "kickme"),
-                    //        InlineKeyboardButton.WithCallbackData(text: "我很可爱,请验证我", callbackData: "verifyme"),
-                    //    },
-                    //    new [] {
-                    //        InlineKeyboardButton.WithCallbackData(text: "管理通过", callbackData: $"adminverify {message.Chat.Id} {message.From.Id}"),
-                    //        InlineKeyboardButton.WithCallbackData(text: "管理踢出", callbackData: $"adminkick {message.Chat.Id} {message.From.Id}"),
-                    //    }
-                    //});
-                    //var result = botClient.SendTextMessageAsync(
-                    //    chatId: message.Chat.Id,
-                    //    text: "测试登录验证",
-                    //    disableNotification: true,
-                    //    replyToMessageId: message.MessageId,
-                    //    replyMarkup: inlineKeyboard).Result;
-
-                    //var b = new WaitBan(message.Chat.Id, message.From.Id, result.MessageId, 120000, botClient);
-                    //Program.BanList.TryAdd(message.From.Id, b); // 不能用From id，要用新加入人的ID
-                    //break;
-#endif
                 default:
-                    if (Program.DB.GetAllowGroupExist(message.Chat.Id) == true)
+                    if (Program.DB.GetAllowGroupExists(message.Chat.Id) == true)
                         botClient.SendTextMessageAsync(
                             chatId: message.Chat.Id,
                             replyToMessageId: message.MessageId,
@@ -1794,7 +2551,7 @@ namespace RBQBot
         /// <summary>群内贴纸消息处理</summary>
         private static void StickerProcess(ITelegramBotClient botClient, Message message)
         {
-            if (Program.DB.GetAllowGroupExist(message.Chat.Id)) // 消息进入
+            if (Program.DB.GetAllowGroupExists(message.Chat.Id)) // 消息进入
             {
                 if (Program.DB.GetAllowFunctionStatus(message.Chat.Id, AllowFunction.AllowGag) == true)
                 {
@@ -1818,83 +2575,6 @@ namespace RBQBot
                 }
             }
         }
-
-        private static void DebugProcess(ITelegramBotClient botClient, Message message)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"当前聊天类型: {message.Chat.Type} 消息类型: {message.Type} |消息日期: {message.Date} |转发日期: {message.ForwardDate?.ToString()}");
-            sb.AppendLine($"消息发送者Id: <a href=\"tg://user?id={message.From?.Id}\">{message.From?.FirstName} {message.From?.LastName}</a> |是否为Bot: {message.From?.IsBot} |用户名: {message.From?.Username} |语言代码: {message.From?.LanguageCode} |是否可以加入的群组: {message.From?.CanJoinGroups} |可以读取所有群内的消息: {message.From?.CanReadAllGroupMessages} |支持内联查询: {message.From?.SupportsInlineQueries}");
-            sb.AppendLine();
-
-            switch (message.Type)
-            {
-                case MessageType.Text:
-                    sb.AppendLine($"转发的消息发送者Id: <a href=\"tg://user?id={message.ForwardFrom?.Id}\">{message.ForwardFrom?.Id}</a> |是否为Bot: {message.ForwardFrom?.IsBot} |昵称: {message.ForwardFrom?.FirstName} {message.ForwardFrom?.LastName} |用户名: {message.ForwardFrom?.Username} |语言代码: {message.ForwardFrom?.LanguageCode} |是否可以加入的群组: {message.ForwardFrom?.CanJoinGroups} |可以读取所有群内的消息: {message.ForwardFrom?.CanReadAllGroupMessages} |支持内联查询: {message.ForwardFrom?.SupportsInlineQueries}");
-                    sb.AppendLine();
-                    break;
-                case MessageType.Photo:
-                    break;
-                case MessageType.Audio:
-                    break;
-                case MessageType.Video:
-                    break;
-                case MessageType.Voice:
-                    break;
-                case MessageType.Document:
-                    break;
-                case MessageType.Sticker:
-                    break;
-                case MessageType.Location:
-                case MessageType.Contact:
-                case MessageType.Venue:
-                case MessageType.Game:
-                case MessageType.VideoNote:
-                case MessageType.Invoice:
-                case MessageType.SuccessfulPayment:
-                case MessageType.WebsiteConnected:
-                case MessageType.ChatMembersAdded:
-                case MessageType.ChatMemberLeft:
-                case MessageType.ChatTitleChanged:
-                case MessageType.ChatPhotoChanged:
-                case MessageType.MessagePinned:
-                case MessageType.ChatPhotoDeleted:
-                case MessageType.GroupCreated:
-                case MessageType.SupergroupCreated:
-                case MessageType.ChannelCreated:
-                case MessageType.MigratedToSupergroup:
-                case MessageType.MigratedFromGroup:
-                case MessageType.Poll:
-                case MessageType.Dice:
-                case MessageType.MessageAutoDeleteTimerChanged:
-                case MessageType.ProximityAlertTriggered:
-                case MessageType.VoiceChatScheduled:
-                case MessageType.VoiceChatStarted:
-                case MessageType.VoiceChatEnded:
-                case MessageType.VoiceChatParticipantsInvited:
-                case MessageType.Unknown:
-                default:
-                    sb.AppendLine("该消息类型未作处理!");
-                    break;
-            }
-
-            //if (string.IsNullOrEmpty(message.From.Username) != true) sb.Append($"@{message.From.Username} ");
-            //else sb.Append("无用户名 ");
-
-            //sb.Append("昵称: ");
-            //if (string.IsNullOrEmpty(message.From.FirstName) != true) sb.Append(message.From.FirstName);
-            //if (string.IsNullOrEmpty(message.From.LastName) != true) sb.Append(message.From.LastName);
-
-            //if (string.IsNullOrEmpty(message.From.LanguageCode) != true) sb.Append(message.From.LanguageCode);
-            //else sb.Append("未知语言代码");
-
-            botClient.SendTextMessageAsync(
-                chatId: message.Chat.Id,
-                replyToMessageId: message.MessageId,
-                disableNotification: true,
-                parseMode: ParseMode.Html,
-                text: sb.ToString());
-        }
-
         #endregion
 
         /// <summary>(目前不使用)选择内联结果接收</summary>

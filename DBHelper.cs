@@ -20,25 +20,17 @@ namespace RBQBot
         private ILiteCollection<RBQStatus> rbqStatusCol = null;
         private ILiteCollection<MessageCount> messageCountCol = null;
 
-        /// <summary>
-        /// [绒布球] 给自己带上了默认口塞! 咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!
-        /// </summary>
-        private readonly string[] defaultSelfLockMsg = { "咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!" };
+        /// <summary>[绒布球] 给自己带上了默认口塞! 咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!</summary>
+        public static readonly string[] defaultSelfLockMsg = { "咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!" };
 
-        /// <summary>
-        /// [Ta] 帮 [绒布球] 带上了默认口塞! 顺便在 Ta 身上画了一个正字~
-        /// </summary>
-        private readonly string[] defaultLockMsg = { "顺便在 Ta 身上画了一个正字~" };
+        /// <summary>[Ta] 帮 [绒布球] 带上了默认口塞! 顺便在 Ta 身上画了一个正字~</summary>
+        public static readonly string[] defaultLockMsg = { "顺便在 Ta 身上画了一个正字~" };
 
-        /// <summary>
-        /// [Ta] 帮 [绒布球] 修好了口塞!\n顺便展示了钥匙并丢到了一边!
-        /// </summary>
-        private readonly string[] defaultEnhancedLockMsg = { "修好了口塞!\n顺便展示了钥匙并丢到了一边!" };
+        /// <summary>[Ta] 帮 [绒布球] 修好了口塞!\n顺便展示了钥匙并丢到了一边!</summary>
+        public static readonly string[] defaultEnhancedLockMsg = { "修好了口塞!\n顺便展示了钥匙并丢到了一边!" };
 
-        /// <summary>
-        /// [绒布球] 挣脱了被人们安装的 超大号默认口塞! Ta感觉自己可以容纳更大的尺寸了呢!
-        /// </summary>
-        private readonly string[] defaultUnlockMsg = { "Ta感觉自己可以容纳更大的尺寸了呢!" };
+        /// <summary>[绒布球] 挣脱了被人们安装的 超大号默认口塞! Ta感觉自己可以容纳更大的尺寸了呢!</summary>
+        public static readonly string[] defaultUnlockMsg = { "Ta感觉自己可以容纳更大的尺寸了呢!" };
 
         private void InitDB()
         {
@@ -116,7 +108,7 @@ namespace RBQBot
             return false;
         }
 
-        public bool GetAllowGroupExist(long groupId)
+        public bool GetAllowGroupExists(long groupId)
         {
             var result = allowGroupCol.FindOne(x => x.GroupId == groupId);
             if (result != null) return true;
@@ -153,7 +145,7 @@ namespace RBQBot
         #region GagItem Operate
         public int GetGagItemCount() => gagItemCol.Count();
 
-        public void AddGagItem(string gagName, long limitPoint, long unLockCount, bool showLimit, bool showUnlock, string[] selfLockMsg = null, string[] lockMsg = null, string[] enhancedLockMsg = null, string[] unlockMsg = null)
+        public void AddGagItem(string gagName, int limitPoint, int unLockCount, bool showLimit, bool showUnlock, string[] selfLockMsg = null, string[] lockMsg = null, string[] enhancedLockMsg = null, string[] unlockMsg = null)
         {
             if (selfLockMsg == null) selfLockMsg = defaultSelfLockMsg;
             if (lockMsg == null) lockMsg = defaultLockMsg;
@@ -202,7 +194,7 @@ namespace RBQBot
             return result;
         }
 
-        public void SetGagItem(string gagName, long limitPoint, long unLockCount, string[] selfLockMsg = null, string[] lockMsg = null, string[] enhancedLockMsg = null, string[] unlockMsg = null)
+        public void SetGagItem(string gagName, int limitPoint, int unLockCount, string[] selfLockMsg = null, string[] lockMsg = null, string[] enhancedLockMsg = null, string[] unlockMsg = null)
         {
             var result = gagItemCol.FindOne(x => x.Name == gagName);
             if (result != null)
@@ -300,6 +292,8 @@ namespace RBQBot
         }
 
         public void SetRBQInfo(RBQ rbq) => rbqCol.Update(rbq);
+
+        public IEnumerable<RBQ> GetAllRBQ() => rbqCol.FindAll();
 
         #endregion
 
