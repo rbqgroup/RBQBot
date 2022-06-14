@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
@@ -14,12 +15,15 @@ namespace RBQBot
 {
     class Program
     {
+        private static readonly PosixSignalRegistration Signal = PosixSignalRegistration.Create(PosixSignal.SIGTERM, WaitStop);
+
         internal static DateTime StartTime;
         internal static volatile bool IsDebug = false;
 
         internal static System.Timers.Timer msgCountTm;
         internal static DBHelper DB;
         internal static TelegramBotClient Bot;
+        private static CancellationTokenSource CTS;
 
         /// <summary>口塞内存队列 (int输入RBQStatus的主键ID)</summary>
         internal static ConcurrentDictionary<int, RBQList> List;
@@ -42,11 +46,12 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "2.0.2.2";
+        internal static string Version = "2.0.3.5";
 
         internal static readonly string AdminTxt =
             "===========超管命令(需要私聊)==========\n" +
             "<code>/admin SendDatabase</code> - 发送当前数据库\n" +
+            "<code>/admin ChatMsg 消息类型 消息内容</code> - 发送广播消息 消息类型1=HTML, 2=Markdown 3 = MarkdownV2 消息换行输入\\n\n" +
             "<code>/admin GetAllowGroup 分页数</code> - 获取所有允许使用的群组列表 (没写分页数就默认分页)\n" +
             "<code>/admin AddAllowGroup 群组Id</code> - 添加允许使用的群组\n" +
             "<code>/admin DelAllowGroup 群组Id</code> - 删除允许使用的群组\n" +
@@ -147,81 +152,91 @@ namespace RBQBot
             #endregion
 
 #if DEBUG
-            var proxy = new HttpToSocks5Proxy("127.0.0.1", 55555);
+            var proxy = new HttpToSocks5Proxy("10.64.39.49", 55555);
             var httpClient = new HttpClient(new HttpClientHandler { Proxy = proxy, UseProxy = true });
             Bot = new TelegramBotClient("", httpClient);
 #else
             Bot = new TelegramBotClient("");
 #endif
 
-            using (var cts = new CancellationTokenSource())
+            CTS = new CancellationTokenSource();
+
+            // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
+            ReceiverOptions receiverOptions = new() { AllowedUpdates = { } };
+
+            Console.WriteLine($"Running, Please Wait {WaitTime}MS To Process Message");
+            #region 机器人启动后忽略WaitTime时间的消息
+            using (var x = new CancellationTokenSource())
             {
-                // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
-                ReceiverOptions receiverOptions = new() { AllowedUpdates = { } };
+                Bot.StartReceiving(
+                    Handlers.HandleUpdateAsyncIgnore,
+                    Handlers.HandleErrorAsync,
+                    receiverOptions,
+                    x.Token);
+                Thread.Sleep(WaitTime);
+                x.Cancel();
+            }
+            #endregion
 
-                Console.WriteLine($"Running, Please Wait {WaitTime}MS To Process Message");
-                #region 机器人启动后忽略WaitTime时间的消息
-                using (var x = new CancellationTokenSource())
-                {
-                    Bot.StartReceiving(
-                        Handlers.HandleUpdateAsyncIgnore,
-                        Handlers.HandleErrorAsync,
-                        receiverOptions,
-                        x.Token);
-                    Thread.Sleep(WaitTime);
-                    x.Cancel();
-                }
-                #endregion
-
-                Bot.StartReceiving(Handlers.HandleUpdateAsync,
+            Bot.StartReceiving(Handlers.HandleUpdateAsync,
                                    Handlers.HandleErrorAsync,
                                    receiverOptions,
-                                   cts.Token);
+                                   CTS.Token);
 
-                #region 恢复内存队列
-                var rec = DB.GetAllRBQStatus();
-                foreach (var i in rec)
+            #region 恢复内存队列
+            var rec = DB.GetAllRBQStatus();
+            foreach (var i in rec)
+            {
+                var tm = new DateTime(i.StartLockTime).AddMinutes(LockTime);
+                if (i.LockCount > 0)
                 {
-                    var tm = new DateTime(i.StartLockTime).AddMinutes(LockTime);
-                    if (i.LockCount > 0)
+                    #region 在锁定时间内恢复添加
+                    if (DB.GetRBQCanLock(i.GroupId, i.RBQId) != true)
                     {
-                        #region 在锁定时间内恢复添加
-                        if (DB.GetRBQCanLock(i.GroupId, i.RBQId) != true)
-                        {
-                            var timeout = (tm - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
-                            var rbqx = new RBQList(i.Id, i.LockCount, i.GagId, timeout);
-                            Program.List.TryAdd(i.Id, rbqx);
-                        }
-                        #endregion
-                        else // 口塞超时 恢复绒布球自由身
-                        {
-                            i.LockCount = 0;
-                            i.GagId = 0;
-                            i.FromId = new long[0];
-                            i.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
-                            DB.SetRBQStatus(i);
-                        }
+                        var timeout = (tm - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+                        var rbqx = new RBQList(i.Id, i.LockCount, i.GagId, timeout);
+                        Program.List.TryAdd(i.Id, rbqx);
+                    }
+                    #endregion
+                    else // 口塞超时 恢复绒布球自由身
+                    {
+                        i.LockCount = 0;
+                        i.GagId = 0;
+                        i.FromId = new long[0];
+                        i.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
+                        DB.SetRBQStatus(i);
                     }
                 }
-                #endregion
-
-                #region 创建凌晨输出群活跃信息
-                msgCountTm = new System.Timers.Timer();
-                msgCountTm.AutoReset = false;
-                msgCountTm.Elapsed += MsgCountTm_Elapsed;
-                msgCountTm.Interval = (DateTime.Today.AddDays(1) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
-                msgCountTm.Start();
-                #endregion
-
-                Console.Write("Running... 输入1 查看功能列表\n主菜单 > ");
-
-                ConsoleHelper();
-
-                // Send cancellation request to stop bot
-#pragma warning disable CS0162 // 检测到无法访问的代码
-                cts.Cancel();
-#pragma warning restore CS0162 // 检测到无法访问的代码
             }
+            #endregion
+
+            #region 创建凌晨输出群活跃信息
+            msgCountTm = new System.Timers.Timer();
+            msgCountTm.AutoReset = false;
+            msgCountTm.Elapsed += MsgCountTm_Elapsed;
+            msgCountTm.Interval = (DateTime.Today.AddDays(1) - DateTime.UtcNow.AddHours(8)).TotalMilliseconds;
+            msgCountTm.Start();
+            #endregion
+
+            Console.Write("Running... 输入1 查看功能列表\n主菜单 > ");
+
+            ConsoleHelper();
+        }
+
+        private static void Disposed()
+        {
+            CTS.Cancel();
+
+            DB.StopDatabase();
+
+            Environment.Exit(0);
+        }
+
+        private static void WaitStop(PosixSignalContext context)
+        {
+            context.Cancel = true;
+
+            Disposed();
         }
 
         #region 控制台操作
@@ -259,7 +274,7 @@ namespace RBQBot
                 switch (command)
                 {
                     case "c": Console.Clear(); break;
-                    case "0": Environment.Exit(0); break;
+                    case "0": { Disposed(); } break;
                     case "1": Console.WriteLine(ConsoleCommandList); break;
                     case "2": AllowGroupOperate(); break;
                     case "3": GagItemOperate(); break;

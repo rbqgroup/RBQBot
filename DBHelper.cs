@@ -58,6 +58,22 @@ namespace RBQBot
             CanAccess = true;
         }
 
+        public void StopDatabase()
+        {
+            CanAccess = false;
+            db.Checkpoint();
+            db.Commit();
+
+            allowGroupCol = null;
+            gagItemCol = null;
+            rbqCol = null;
+            rbqStatusCol = null;
+            messageCountCol = null;
+
+            db.Dispose();
+            db = null;
+        }
+
         public void GetDatabase()
         {
             CanAccess = false;
@@ -252,7 +268,7 @@ namespace RBQBot
         {
             if (CanAccess)
             {
-                gagItemCol.FindAll();
+                return gagItemCol.FindAll();
             }
             return new GagItem[0];
         }
@@ -551,7 +567,7 @@ namespace RBQBot
         {
             if (CanAccess)
             {
-                rbqStatusCol.FindAll();
+                return rbqStatusCol.FindAll();
             }
             return new RBQStatus[0];
         }
@@ -776,7 +792,7 @@ namespace RBQBot
         {
             if (CanAccess)
             {
-                messageCountCol.FindAll();
+                return messageCountCol.FindAll();
             }
             return new MessageCount[0];
         }
