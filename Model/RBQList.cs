@@ -49,14 +49,16 @@ namespace RBQBot
         private void Tm_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             var rbq = Program.DB.GetRBQStatus(Id);
-            rbq.LockCount = 0;
-            rbq.FromId = new long[0];
-            rbq.GagId = 0;
-            rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
-            Program.DB.SetRBQStatus(rbq);
+            if (rbq != null)
+            {
+                rbq.LockCount = 0;
+                rbq.FromId = new long[0];
+                rbq.GagId = 0;
+                rbq.StartLockTime = DateTime.UtcNow.AddHours(8).Ticks;
+                Program.DB.SetRBQStatus(rbq);
+            }
 
             Program.List.TryRemove(Id, out _);
-
             Program.DB.SetRBQPointDel(rbq.RBQId, 10);
         }
     }

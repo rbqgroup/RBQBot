@@ -19,18 +19,6 @@ namespace RBQBot
 {
     public class Handlers
     {
-        /// <summary>[绒布球] 给自己带上了默认口塞! 咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!</summary>
-        public static readonly string[] defaultSelfLockMsg = { "咦?! 居然自己给自己戴? 真是个可爱的绒布球呢!" };
-
-        /// <summary>[Ta] 帮 [绒布球] 带上了默认口塞! 顺便在 Ta 身上画了一个正字~</summary>
-        public static readonly string[] defaultLockMsg = { "顺便在 Ta 身上画了一个正字~" };
-
-        /// <summary>[Ta] 帮 [绒布球] 修好了口塞!\n顺便展示了钥匙并丢到了一边!</summary>
-        public static readonly string[] defaultEnhancedLockMsg = { "修好了口塞!\n顺便展示了钥匙并丢到了一边!" };
-
-        /// <summary>[绒布球] 挣脱了被人们安装的 超大号默认口塞! Ta感觉自己可以容纳更大的尺寸了呢!</summary>
-        public static readonly string[] defaultUnlockMsg = { "Ta感觉自己可以容纳更大的尺寸了呢!" };
-
         #region 管理员命令封装
         private static void AdminProcess(ITelegramBotClient botClient, Message message)
         {
@@ -51,6 +39,7 @@ namespace RBQBot
                     switch (comm[1])
                     {
                         case "SendDatabase": SendDatabase(botClient, message); break;
+                        case "ChatMsg": ChatMsg(botClient, message); break;
                         case "GetAllowGroup": GetAllowGroup(botClient, message); break;
                         case "AddAllowGroup": AddAllowGroup(botClient, message); break;
                         case "DelAllowGroup": DelAllowGroup(botClient, message); break;
@@ -86,6 +75,7 @@ namespace RBQBot
                     switch (comm[1])
                     {
                         case "SendDatabase":
+                        case "ChatMsg":
                         case "GetAllowGroup":
                         case "AddAllowGroup":
                         case "DelAllowGroup":
@@ -190,6 +180,86 @@ namespace RBQBot
             }
         }
 
+        private static void ChatMsg(ITelegramBotClient botClient, Message message)
+        {
+            var comm = message.Text.Split(' ');
+            if (comm.Length == 4)
+            {
+                if (int.TryParse(comm[2], out int type) == true)
+                {
+                    var groups = Program.DB.GetAllowGroups();
+                    switch (type)
+                    {
+                        case 1:
+                            foreach (var i in groups)
+                            {
+                                botClient.SendTextMessageAsync(
+                                    chatId: i.GroupId,
+                                    disableNotification: true,
+                                    parseMode: ParseMode.Html,
+                                    text: comm[3]);
+                                botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    disableNotification: true,
+                                    text: "广播完成!");
+                            }
+                            break;
+                        case 2:
+                            foreach (var i in groups)
+                            {
+                                botClient.SendTextMessageAsync(
+                                    chatId: i.GroupId,
+                                    disableNotification: true,
+                                    parseMode: ParseMode.Markdown,
+                                    text: comm[3]);
+                                botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    disableNotification: true,
+                                    text: "广播完成!");
+                            }
+                            break;
+                        case 3:
+                            foreach (var i in groups)
+                            {
+                                botClient.SendTextMessageAsync(
+                                    chatId: i.GroupId,
+                                    disableNotification: true,
+                                    parseMode: ParseMode.MarkdownV2,
+                                    text: comm[3]);
+                                botClient.SendTextMessageAsync(
+                                    chatId: message.Chat.Id,
+                                    disableNotification: true,
+                                    text: "广播完成!");
+                            }
+                            break;
+                        default:
+                            botClient.SendTextMessageAsync(
+                                chatId: message.Chat.Id,
+                                replyToMessageId: message.MessageId,
+                                disableNotification: true,
+                                text: "参数错误! 请重新输入!");
+                            break;
+                    }
+                }
+                else
+                {
+                    botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "参数错误! 请重新输入!");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    replyToMessageId: message.MessageId,
+                    disableNotification: true,
+                    text: "参数错误! 请重新输入!");
+            }
+        }
+
         private static void GetAllowGroup(ITelegramBotClient botClient, Message message)
         {
             var comm = message.Text.Split(' ');
@@ -236,10 +306,10 @@ namespace RBQBot
                 else
                 {
                     botClient.SendTextMessageAsync(
-                    chatId: message.Chat.Id,
-                    replyToMessageId: message.MessageId,
-                    disableNotification: true,
-                    text: "参数错误! 请重新输入!");
+                        chatId: message.Chat.Id,
+                        replyToMessageId: message.MessageId,
+                        disableNotification: true,
+                        text: "参数错误! 请重新输入!");
                 }
             }
             else
@@ -507,10 +577,10 @@ namespace RBQBot
                     var gag = Program.DB.GetGagItemInfo(obj.Name);
                     gag.LimitPoint = obj.LimitPoint;
                     gag.UnLockCount = obj.UnLockCount;
-                    gag.SelfLockMsg = obj.SelfLockMsg == null ? defaultSelfLockMsg : obj.SelfLockMsg;
-                    gag.LockMsg = obj.LockMsg == null ? defaultLockMsg : obj.LockMsg;
-                    gag.EnhancedLockMsg = obj.EnhancedLockMsg == null ? defaultEnhancedLockMsg : obj.EnhancedLockMsg;
-                    gag.UnLockMsg = obj.UnLockMsg == null ? defaultUnlockMsg : obj.UnLockMsg;
+                    gag.SelfLockMsg = obj.SelfLockMsg == null ? Program.DB.defaultSelfLockMsg : obj.SelfLockMsg;
+                    gag.LockMsg = obj.LockMsg == null ? Program.DB.defaultLockMsg : obj.LockMsg;
+                    gag.EnhancedLockMsg = obj.EnhancedLockMsg == null ? Program.DB.defaultEnhancedLockMsg : obj.EnhancedLockMsg;
+                    gag.UnLockMsg = obj.UnLockMsg == null ? Program.DB.defaultUnlockMsg : obj.UnLockMsg;
                     gag.ShowLimit = obj.ShowLimit;
                     gag.ShowUnlock = obj.ShowUnlock;
                     Program.DB.SetGagItem(gag);
