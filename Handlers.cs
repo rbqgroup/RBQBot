@@ -50,6 +50,7 @@ namespace RBQBot
                 {
                     switch (comm[1])
                     {
+                        case "SendDatabase": SendDatabase(botClient, message); break;
                         case "GetAllowGroup": GetAllowGroup(botClient, message); break;
                         case "AddAllowGroup": AddAllowGroup(botClient, message); break;
                         case "DelAllowGroup": DelAllowGroup(botClient, message); break;
@@ -84,6 +85,7 @@ namespace RBQBot
                 {
                     switch (comm[1])
                     {
+                        case "SendDatabase":
                         case "GetAllowGroup":
                         case "AddAllowGroup":
                         case "DelAllowGroup":
@@ -154,6 +156,40 @@ namespace RBQBot
         }
 
         #region 超管命令封装
+        private static void SendDatabase(ITelegramBotClient botClient, Message message)
+        {
+            var count = Program.DB.GetGroupCount();
+            var groups = Program.DB.GetAllowGroups();
+            var allowGroup = new long[count];
+            var ind = 0;
+            foreach (var i in groups)
+            {
+                allowGroup[ind] = i.GroupId;
+                ind++;
+                botClient.SendTextMessageAsync(
+                    chatId: i.GroupId,
+                    disableNotification: true,
+                    text: $"{DateTime.UtcNow.AddHours(8)} 正在分离数据库, 期间任何操作将不会提交, 很快就好.");
+            }
+
+            Program.DB.GetDatabase();
+            using (Stream sr = System.IO.File.OpenRead(AppDomain.CurrentDomain.BaseDirectory + "db/temp.db"))
+            {
+                var msg = botClient.SendDocumentAsync(
+                    chatId: Program.DebugUserId,
+                    document: new Telegram.Bot.Types.InputFiles.InputOnlineFile(content: sr, fileName: "database.db"),
+                    caption: $"{DateTime.UtcNow.AddHours(8)} Upload Database.").Result;
+            }
+
+            for (int i = 0; i < allowGroup.Length; i++)
+            {
+                botClient.SendTextMessageAsync(
+                    chatId: allowGroup[i],
+                    disableNotification: true,
+                    text: $"{DateTime.UtcNow.AddHours(8)} 数据库已恢复.");
+            }
+        }
+
         private static void GetAllowGroup(ITelegramBotClient botClient, Message message)
         {
             var comm = message.Text.Split(' ');
