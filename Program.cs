@@ -42,10 +42,11 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "2.0.0.0";
+        internal static string Version = "2.0.2.2";
 
         internal static readonly string AdminTxt =
             "===========超管命令(需要私聊)==========\n" +
+            "<code>/admin SendDatabase</code> - 发送当前数据库\n" +
             "<code>/admin GetAllowGroup 分页数</code> - 获取所有允许使用的群组列表 (没写分页数就默认分页)\n" +
             "<code>/admin AddAllowGroup 群组Id</code> - 添加允许使用的群组\n" +
             "<code>/admin DelAllowGroup 群组Id</code> - 删除允许使用的群组\n" +
@@ -793,7 +794,7 @@ namespace RBQBot
                     {
                         if (kvp[si].UserId == 0) break;
                         var result = Bot.GetChatMemberAsync(group[i], kvp[si].UserId).Result;
-                        sb.AppendLine($"TOP {si+1} :  <a href=\"tg://user?id={kvp[si].UserId}\"><b><u>{result.User.FirstName} {result.User?.LastName}</b></u></a>  ({kvp[si].Count})");
+                        sb.AppendLine($"TOP {si+1} :  <a href=\"tg://user?id={kvp[si].UserId}\"><b><u>{result.User.FirstName} {result.User?.LastName}</u></b></a>  ({kvp[si].Count})");
                     }
 
                     Bot.SendTextMessageAsync(

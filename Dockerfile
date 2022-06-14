@@ -1,5 +1,7 @@
 FROM amd64/alpine:3.15
 
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+
 RUN apk add --no-cache \
         ca-certificates \
         \
@@ -22,5 +24,5 @@ ENV \
 WORKDIR /root/bot
 RUN mkdir /root/bot/db
 COPY ./RBQBot ./
-COPY ./database.db ./db/
+COPY ./db/database.db ./db/
 ENTRYPOINT ["./RBQBot"]
