@@ -46,7 +46,7 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "2.0.3.5";
+        internal static string Version = "2.0.3.7";
 
         internal static readonly string AdminTxt =
             "===========超管命令(需要私聊)==========\n" +
@@ -788,11 +788,11 @@ namespace RBQBot
                                         break;
                                     }
 
-                                    Array.Copy(kvp, i3, temp, 0, kvp.Length - i3);
+                                    Array.Copy(kvp, 0, temp, 0, kvp.Length);
                                     kvp[i3].UserId = list[i2].UserId;
                                     kvp[i3].Count = list[i2].Count;
-                                    if (i3==0) Array.Copy(temp, 0, kvp, i3 + 1, kvp.Length - i3 - 1);
-                                    else Array.Copy(temp, i3, kvp, i3, kvp.Length - i3);
+                                    if (i3==0) Array.Copy(temp, 0, kvp, 1, kvp.Length - 1);
+                                    else Array.Copy(temp, i3, kvp, i3+1, kvp.Length - i3 - 1);
 
                                     break;
                                 }
@@ -809,7 +809,7 @@ namespace RBQBot
                     {
                         if (kvp[si].UserId == 0) break;
                         var result = Bot.GetChatMemberAsync(group[i], kvp[si].UserId).Result;
-                        sb.AppendLine($"TOP {si+1} :  <a href=\"tg://user?id={kvp[si].UserId}\"><b><u>{result.User.FirstName} {result.User?.LastName}</u></b></a>  ({kvp[si].Count})");
+                        sb.AppendLine($"TOP {si+1} :  <a href=\"tg://user?id={kvp[si].UserId}\">{result.User.FirstName} {result.User?.LastName}</a> ({kvp[si].Count})");
                     }
 
                     Bot.SendTextMessageAsync(

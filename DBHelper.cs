@@ -405,8 +405,7 @@ namespace RBQBot
             }
             return new RBQ()
             {
-                Id = 1,
-                TelegramId = 1324338125,
+                TelegramId = 777000,
                 RBQPoint = 0,
             };
         }
