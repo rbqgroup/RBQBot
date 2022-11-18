@@ -1593,7 +1593,7 @@ namespace RBQBot
                                     chatId: message.Chat.Id,
                                     disableNotification: true,
                                     parseMode: ParseMode.Html,
-                                    text: "要加固的口塞不存在!");
+                                    text: "对方目前没有佩戴口塞!");
                             }
                         }
                     }
