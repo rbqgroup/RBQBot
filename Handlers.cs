@@ -1545,14 +1545,14 @@ namespace RBQBot
                         #endregion
                         else
                         {
-                            Program.DB.AddRBQFroms(message.Chat.Id, message.ReplyToMessage.From.Id, message.From.Id);
-
                             var R = new Random();
                             var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
                             var gag = Program.DB.GetGagItemInfo(rbq.GagId);
 
                             if (gag != null)
                             {
+                                Program.DB.AddRBQFroms(message.Chat.Id, message.ReplyToMessage.From.Id, message.From.Id);
+
                                 var tm = DateTime.UtcNow.AddHours(8);
 
                                 rbq.StartLockTime = tm.Ticks;
@@ -2643,14 +2643,6 @@ namespace RBQBot
                         replyToMessageId: message.MessageId,
                         disableNotification: true,
                         text: Program.PrivacyTxt);
-                    break;
-                default:
-                    if (Program.DB.GetAllowGroupExists(message.Chat.Id) == true)
-                        botClient.SendTextMessageAsync(
-                            chatId: message.Chat.Id,
-                            replyToMessageId: message.MessageId,
-                            disableNotification: true,
-                            text: "命令错误! 请输入 /help 查看命令!");
                     break;
             }
         }
