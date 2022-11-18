@@ -1545,14 +1545,14 @@ namespace RBQBot
                         #endregion
                         else
                         {
-                            Program.DB.AddRBQFroms(message.Chat.Id, message.ReplyToMessage.From.Id, message.From.Id);
-
                             var R = new Random();
                             var rbq = Program.DB.GetRBQStatus(message.Chat.Id, message.ReplyToMessage.From.Id);
                             var gag = Program.DB.GetGagItemInfo(rbq.GagId);
 
                             if (gag != null)
                             {
+                                Program.DB.AddRBQFroms(message.Chat.Id, message.ReplyToMessage.From.Id, message.From.Id);
+
                                 var tm = DateTime.UtcNow.AddHours(8);
 
                                 rbq.StartLockTime = tm.Ticks;
