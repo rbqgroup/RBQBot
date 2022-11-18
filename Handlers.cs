@@ -2644,14 +2644,6 @@ namespace RBQBot
                         disableNotification: true,
                         text: Program.PrivacyTxt);
                     break;
-                default:
-                    if (Program.DB.GetAllowGroupExists(message.Chat.Id) == true)
-                        botClient.SendTextMessageAsync(
-                            chatId: message.Chat.Id,
-                            replyToMessageId: message.MessageId,
-                            disableNotification: true,
-                            text: "命令错误! 请输入 /help 查看命令!");
-                    break;
             }
         }
 
