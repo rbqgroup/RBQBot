@@ -2128,6 +2128,12 @@ namespace RBQBot
         {
             for (int i = 0; i < message.NewChatMembers.Length; i++)
             {
+                botClient.SendTextMessageAsync(
+                        chatId: message.Chat.Id,
+                        disableNotification: true,
+                        parseMode: ParseMode.Html,
+                        text: $"<a href=\"tg://user?id={message.From.Id}\">{message.From.FirstName} {message.From?.LastName}</a> 邀请了 <a href=\"tg://user?id={message.NewChatMembers[i].Id}\">{message.NewChatMembers[i].FirstName} {message.NewChatMembers[i]?.LastName}</a>!");
+
                 if (message.NewChatMembers[i].IsBot != true)
                 {
                     var exist = Program.DB.GetRBQExist(message.NewChatMembers[i].Id);
@@ -2164,7 +2170,7 @@ namespace RBQBot
                         disableNotification: true,
                         parseMode: ParseMode.Html,
                         replyMarkup: inlineKeyboard,
-                        text: $"欢迎 <a href=\"tg://user?id={message.From.Id}\">{message.NewChatMembers[i].FirstName} {message.NewChatMembers[i]?.LastName}</a> 加入!\n请发送 「<code>/verify 我很可爱</code>」 或点击下面的按钮来完成加群验证(点击可复制),否则您将会在120秒后被移出群组.").Result;
+                        text: $"欢迎 <a href=\"tg://user?id={message.NewChatMembers[i].Id}\">{message.NewChatMembers[i].FirstName} {message.NewChatMembers[i]?.LastName}</a> 加入!\n请发送 「<code>/verify 我很可爱</code>」 或点击下面的按钮来完成加群验证(点击可复制),否则您将会在120秒后被移出群组.").Result;
 
                     var b = new WaitBan(message.Chat.Id, message.NewChatMembers[i].Id, result.MessageId, Program.UserVerifyTime, botClient);
                     Program.BanList.TryAdd(message.NewChatMembers[i].Id, b);
