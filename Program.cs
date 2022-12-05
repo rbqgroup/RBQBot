@@ -46,7 +46,7 @@ namespace RBQBot
 #endif
 
         /// <summary>版本号(主要.次要.功能.修订)</summary>
-        internal static string Version = "2.0.3.7";
+        internal static string Version = "2.0.4.0";
 
         internal static readonly string AdminTxt =
             "===========超管命令(需要私聊)==========\n" +
